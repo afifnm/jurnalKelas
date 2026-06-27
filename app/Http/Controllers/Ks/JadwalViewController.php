@@ -21,16 +21,17 @@ class JadwalViewController extends Controller
 
         $tahunId = $request->tahun_ajaran_id ?? $tahunAktif?->id;
 
+        $allJadwalKelas = Jadwal::with(['guru', 'mapel'])
+            ->whereIn('kelas_id', $kelasList->pluck('id'))
+            ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
+            ->orderBy('hari')
+            ->orderBy('jam_mulai')
+            ->get()
+            ->groupBy('kelas_id');
+
         $jadwalPerKelas = collect();
         foreach ($kelasList as $kelas) {
-            $jadwal = Jadwal::with(['guru', 'mapel'])
-                ->where('kelas_id', $kelas->id)
-                ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-                ->orderBy('hari')
-                ->orderBy('jam_mulai')
-                ->get()
-                ->groupBy('hari');
-
+            $jadwal = $allJadwalKelas->get($kelas->id, collect())->groupBy('hari');
             $jadwalPerKelas[$kelas->id] = [
                 'kelas'  => $kelas,
                 'jadwal' => $jadwal,
@@ -53,16 +54,17 @@ class JadwalViewController extends Controller
 
         $tahunId = $request->tahun_ajaran_id ?? $tahunAktif?->id;
 
+        $allJadwalGuru = Jadwal::with(['kelas', 'mapel'])
+            ->whereIn('guru_id', $guruList->pluck('id'))
+            ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
+            ->orderBy('hari')
+            ->orderBy('jam_mulai')
+            ->get()
+            ->groupBy('guru_id');
+
         $jadwalPerGuru = collect();
         foreach ($guruList as $guru) {
-            $jadwal = Jadwal::with(['kelas', 'mapel'])
-                ->where('guru_id', $guru->id)
-                ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-                ->orderBy('hari')
-                ->orderBy('jam_mulai')
-                ->get()
-                ->groupBy('hari');
-
+            $jadwal = $allJadwalGuru->get($guru->id, collect())->groupBy('hari');
             $jadwalPerGuru[$guru->id] = [
                 'guru'   => $guru,
                 'jadwal' => $jadwal,

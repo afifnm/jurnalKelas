@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', 'Identitas Sekolah')
 @section('page-title', 'Identitas Sekolah')
+@section('breadcrumb')
+    <i data-lucide="home" class="w-3 h-3"></i><span>Admin</span>
+    <i data-lucide="chevron-right" class="w-3 h-3"></i><span class="text-slate-700 dark:text-zinc-200 font-medium">Identitas Sekolah</span>
+@endsection
 @section('content')
 <div x-data="sekolahManager()" x-init="init()">
     <div class="max-w-2xl">

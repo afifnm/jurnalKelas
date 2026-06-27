@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Imports\UserImport;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
 
 class UserController extends Controller
 {
@@ -28,7 +30,7 @@ class UserController extends Controller
             $query->role($role);
         }
 
-        $users = $query->latest()->paginate(15)->withQueryString();
+        $users = $query->orderBy('nama')->paginate(15)->withQueryString();
         $roles = ['admin', 'guru', 'ks'];
 
         return view('admin.users.index', compact('users', 'roles'));
@@ -79,5 +81,28 @@ class UserController extends Controller
         $user = User::withTrashed()->findOrFail($id);
         $user->restore();
         return response()->json(['message' => 'User berhasil dipulihkan.']);
+    }
+
+    public function resetPassword(int $id): JsonResponse
+    {
+        $user = User::findOrFail($id);
+        $user->update(['password' => '12345678']);
+        return response()->json(['message' => "Password {$user->nama} berhasil direset ke 12345678."]);
+    }
+
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:2048'],
+        ]);
+
+        $import = new UserImport();
+        Excel::import($import, $request->file('file'));
+
+        return response()->json([
+            'message'       => "{$import->successCount} pengguna berhasil diimpor.",
+            'success_count' => $import->successCount,
+            'errors'        => $import->errors,
+        ]);
     }
 }

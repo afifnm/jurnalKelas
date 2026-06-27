@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Jurnal;
 use App\Models\Kelas;
-use App\Models\Mapel;
+use App\Models\TahunAjaran;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,31 +15,47 @@ class JurnalController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Jurnal::with(['guru', 'kelas', 'mapel', 'lampiran']);
+        $tahunAktif = TahunAjaran::aktif();
+
+        $query = Jurnal::with(['guru', 'kelas', 'mapel', 'lampiran'])
+            ->join('users as guru_user', 'jurnal.guru_id', '=', 'guru_user.id')
+            ->select('jurnal.*')
+            ->when($tahunAktif, fn($q) => $q->where('jurnal.tahun_ajaran_id', $tahunAktif->id));
 
         if ($request->filled('guru_id')) {
-            $query->where('guru_id', $request->guru_id);
+            $query->where('jurnal.guru_id', $request->guru_id);
         }
         if ($request->filled('kelas_id')) {
-            $query->where('kelas_id', $request->kelas_id);
-        }
-        if ($request->filled('tanggal_dari')) {
-            $query->whereDate('tanggal', '>=', $request->tanggal_dari);
-        }
-        if ($request->filled('tanggal_sampai')) {
-            $query->whereDate('tanggal', '<=', $request->tanggal_sampai);
+            $query->where('jurnal.kelas_id', $request->kelas_id);
         }
 
-        $jurnal = $query->latest('tanggal')->paginate(20)->withQueryString();
+        // Shortcut periode
+        $periode = $request->input('periode');
+        if ($periode === 'hari_ini') {
+            $query->whereDate('jurnal.tanggal', today());
+        } elseif ($periode === 'minggu_ini') {
+            $query->whereBetween('jurnal.tanggal', [now()->startOfWeek(), now()->endOfWeek()]);
+        } elseif ($periode === 'bulan_ini') {
+            $query->whereMonth('jurnal.tanggal', now()->month)
+                  ->whereYear('jurnal.tanggal', now()->year);
+        } elseif ($request->filled('tanggal_dari') || $request->filled('tanggal_sampai')) {
+            if ($request->filled('tanggal_dari')) {
+                $query->whereDate('jurnal.tanggal', '>=', $request->tanggal_dari);
+            }
+            if ($request->filled('tanggal_sampai')) {
+                $query->whereDate('jurnal.tanggal', '<=', $request->tanggal_sampai);
+            }
+        }
+
+        $jurnal = $query->orderByDesc('jurnal.tanggal')->orderBy('guru_user.nama')->paginate(25)->withQueryString();
         $guru   = User::role('guru')->orderBy('nama')->get();
         $kelas  = Kelas::orderBy('nama')->get();
-        $mapel  = Mapel::orderBy('nama')->get();
 
-        return view('admin.jurnal.index', compact('jurnal', 'guru', 'kelas', 'mapel'));
+        return view('admin.jurnal.index', compact('jurnal', 'guru', 'kelas', 'tahunAktif'));
     }
 
     public function show(Jurnal $jurnal): JsonResponse
     {
-        return response()->json($jurnal->load(['guru', 'kelas', 'mapel', 'jadwal', 'lampiran', 'log.user']));
+        return response()->json($jurnal->load(['guru', 'kelas', 'mapel', 'jadwal', 'lampiran']));
     }
 }

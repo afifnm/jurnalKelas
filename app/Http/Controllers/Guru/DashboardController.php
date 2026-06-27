@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Guru;
 use App\Http\Controllers\Controller;
 use App\Models\Jadwal;
 use App\Models\Jurnal;
-use App\Models\KinerjaGuru;
 use App\Models\TahunAjaran;
 use Illuminate\View\View;
 
@@ -17,12 +16,15 @@ class DashboardController extends Controller
         $tahunAktif = TahunAjaran::aktif();
         $hariIni    = now()->dayOfWeekIso;
 
-        $jadwalHariIni = Jadwal::with(['kelas', 'mapel'])
+        $jadwalMinggu = Jadwal::with(['kelas', 'mapel'])
             ->where('guru_id', $guru->id)
-            ->where('hari', $hariIni)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
+            ->orderBy('hari')
             ->orderBy('jam_mulai')
-            ->get();
+            ->get()
+            ->groupBy('hari');
+
+        $jadwalHariIni = $jadwalMinggu->get($hariIni, collect());
 
         $sudahDiisiHariIni = Jurnal::where('guru_id', $guru->id)
             ->whereDate('tanggal', today())
@@ -31,11 +33,14 @@ class DashboardController extends Controller
 
         $belumDiisi = $jadwalHariIni->filter(fn($j) => ! in_array($j->id, $sudahDiisiHariIni));
 
-        $bulanIni   = now()->format('Y-m');
-        $kinerja    = KinerjaGuru::where('guru_id', $guru->id)->where('periode', $bulanIni)->first();
+        $jurnalBulanIni = Jurnal::where('guru_id', $guru->id)
+            ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [now()->format('Y-m')])
+            ->count();
 
-        $jurnalRevisi  = Jurnal::where('guru_id', $guru->id)->where('status', 'revisi')->count();
-        $jurnalDraft   = Jurnal::where('guru_id', $guru->id)->where('status', 'draft')->count();
+        $jurnalTerlambatBulanIni = Jurnal::where('guru_id', $guru->id)
+            ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [now()->format('Y-m')])
+            ->where('is_terlambat', true)
+            ->count();
 
         $riwayatJurnal = Jurnal::with(['kelas', 'mapel'])
             ->where('guru_id', $guru->id)
@@ -43,9 +48,13 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        $namaHari  = Jadwal::getNamaHariList();
+        $totalSesi = $jadwalMinggu->flatten()->count();
+
         return view('guru.dashboard', compact(
-            'jadwalHariIni', 'sudahDiisiHariIni', 'belumDiisi',
-            'kinerja', 'jurnalRevisi', 'jurnalDraft', 'riwayatJurnal', 'tahunAktif'
+            'jadwalHariIni', 'jadwalMinggu', 'sudahDiisiHariIni', 'belumDiisi',
+            'jurnalBulanIni', 'jurnalTerlambatBulanIni', 'riwayatJurnal',
+            'tahunAktif', 'namaHari', 'hariIni', 'totalSesi'
         ));
     }
 }

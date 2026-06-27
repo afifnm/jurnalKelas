@@ -13,6 +13,8 @@ class JurnalLampiran extends Model
 
     protected $fillable = ['jurnal_id', 'path', 'keterangan'];
 
+    protected $appends = ['url'];
+
     public function jurnal(): BelongsTo
     {
         return $this->belongsTo(Jurnal::class);

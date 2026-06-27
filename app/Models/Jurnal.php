@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\JurnalLog;
+
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Jurnal extends Model
@@ -16,17 +18,15 @@ class Jurnal extends Model
     protected $fillable = [
         'jadwal_id', 'guru_id', 'kelas_id', 'mapel_id', 'tahun_ajaran_id',
         'tanggal', 'jam_masuk_aktual', 'jam_keluar_aktual',
-        'materi', 'metode_pembelajaran', 'kendala', 'tindak_lanjut', 'catatan',
-        'status', 'is_terlambat', 'menit_terlambat',
-        'validated_by', 'validated_at', 'catatan_validasi',
+        'materi', 'catatan',
+        'is_terlambat', 'menit_terlambat',
     ];
 
     protected function casts(): array
     {
         return [
-            'tanggal'      => 'date',
-            'validated_at' => 'datetime',
-            'is_terlambat' => 'boolean',
+            'tanggal'        => 'date',
+            'is_terlambat'   => 'boolean',
             'menit_terlambat' => 'integer',
         ];
     }
@@ -56,11 +56,6 @@ class Jurnal extends Model
         return $this->belongsTo(TahunAjaran::class);
     }
 
-    public function validator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'validated_by');
-    }
-
     public function lampiran(): HasMany
     {
         return $this->hasMany(JurnalLampiran::class);
@@ -73,16 +68,6 @@ class Jurnal extends Model
 
     public function isEditableByGuru(): bool
     {
-        return $this->status === 'draft';
-    }
-
-    public function getBadgeColorAttribute(): string
-    {
-        return 'badge-draft';
-    }
-
-    public function getStatusLabelAttribute(): string
-    {
-        return 'Terisi';
+        return true;
     }
 }

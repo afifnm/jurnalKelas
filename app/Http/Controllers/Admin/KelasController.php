@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Imports\KelasImport;
 use App\Models\Kelas;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
 
 class KelasController extends Controller
 {
@@ -34,5 +36,21 @@ class KelasController extends Controller
     {
         $kelas->delete();
         return response()->json(['message' => 'Kelas berhasil dihapus.']);
+    }
+
+    public function import(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:2048'],
+        ]);
+
+        $import = new KelasImport();
+        Excel::import($import, $request->file('file'));
+
+        return response()->json([
+            'message'       => "{$import->successCount} kelas berhasil diimpor.",
+            'success_count' => $import->successCount,
+            'errors'        => $import->errors,
+        ]);
     }
 }

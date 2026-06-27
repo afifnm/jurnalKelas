@@ -28,7 +28,7 @@ class JurnalPolicy
     public function update(User $user, Jurnal $jurnal): bool
     {
         if ($user->hasRole('guru')) {
-            return $jurnal->guru_id === $user->id && $jurnal->isEditableByGuru();
+            return $jurnal->guru_id === $user->id;
         }
         return false;
     }
@@ -36,22 +36,9 @@ class JurnalPolicy
     public function delete(User $user, Jurnal $jurnal): bool
     {
         if ($user->hasRole('guru')) {
-            return $jurnal->guru_id === $user->id && $jurnal->status === 'draft';
+            return $jurnal->guru_id === $user->id;
         }
         return $user->hasRole('admin');
-    }
-
-    public function submit(User $user, Jurnal $jurnal): bool
-    {
-        return $user->hasRole('guru')
-            && $jurnal->guru_id === $user->id
-            && $jurnal->isEditableByGuru();
-    }
-
-    public function validate(User $user, Jurnal $jurnal): bool
-    {
-        return $user->hasAnyRole(['ks', 'admin'])
-            && $jurnal->status === 'submitted';
     }
 
     public function restore(User $user, Jurnal $jurnal): bool

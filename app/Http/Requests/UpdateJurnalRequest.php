@@ -10,8 +10,7 @@ class UpdateJurnalRequest extends FormRequest
     {
         $jurnal = $this->route('jurnal');
         return $this->user()->hasRole('guru')
-            && $jurnal->guru_id === $this->user()->id
-            && $jurnal->isEditableByGuru();
+            && $jurnal->guru_id === $this->user()->id;
     }
 
     public function rules(): array
@@ -23,9 +22,6 @@ class UpdateJurnalRequest extends FormRequest
             'jam_masuk_aktual'      => ['required', 'date_format:H:i'],
             'jam_keluar_aktual'     => ['nullable', 'date_format:H:i', 'after:jam_masuk_aktual'],
             'materi'                => ['required', 'string', 'max:2000'],
-            'metode_pembelajaran'   => ['nullable', 'string', 'max:500'],
-            'kendala'               => ['nullable', 'string', 'max:1000'],
-            'tindak_lanjut'         => ['nullable', 'string', 'max:1000'],
             'catatan'               => ['nullable', 'string', 'max:1000'],
             'lampiran'              => ['nullable', 'array', 'max:5'],
             'lampiran.*'            => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],

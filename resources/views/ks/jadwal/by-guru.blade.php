@@ -3,7 +3,7 @@
 @section('page-title', 'Jadwal per Guru')
 @section('breadcrumb')
     <i data-lucide="home" class="w-3 h-3"></i><span>Kepala Sekolah</span>
-    <i data-lucide="chevron-right" class="w-3 h-3"></i><span>Jadwal per Guru</span>
+    <i data-lucide="chevron-right" class="w-3 h-3"></i><span class="text-slate-700 dark:text-zinc-200 font-medium">Jadwal per Guru</span>
 @endsection
 
 @section('content')
