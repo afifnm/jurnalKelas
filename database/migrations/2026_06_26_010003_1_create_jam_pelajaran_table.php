@@ -18,6 +18,7 @@ return new class extends Migration
             $table->time('jam_mulai');
             $table->time('jam_selesai');
             $table->timestamps();
+            $table->softDeletes();
             $table->unique(['hari', 'jam_ke']);
         });
     }

@@ -15,7 +15,7 @@
 {!! navItem(route('admin.jurnal.index'), 'notebook-pen', 'Jurnal Guru', str_starts_with($currentRoute, 'admin.jurnal')) !!}
 {!! navItem(route('admin.jadwal.index'), 'calendar-clock', 'Jadwal Pelajaran', in_array($currentRoute, ['admin.jadwal.index', 'admin.jadwal.by-guru'])) !!}
 {!! navItem(route('admin.jadwal.mapping'), 'calendar-range', 'Mapping Jadwal', $currentRoute === 'admin.jadwal.mapping') !!}
-
+{!! navItem(route('admin.tugas-mengajar.index'), 'users-2', 'Pembagian Tugas', str_starts_with($currentRoute, 'admin.tugas-mengajar')) !!}
 <p class="px-3 mt-4 mb-1.5 text-[10px] font-semibold text-slate-400 dark:text-zinc-600 uppercase tracking-widest">Master Data</p>
 
 {!! navItem(route('admin.users.index'), 'users', 'Pengguna', str_starts_with($currentRoute, 'admin.users')) !!}

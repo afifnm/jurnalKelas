@@ -15,8 +15,9 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             KelasSeeder::class,
             MapelSeeder::class,
+            JamPelajaranSeeder::class,
             JadwalSeeder::class,
-            JurnalSeeder::class,
+            TugasMengajarSeeder::class,
         ]);
     }
 }

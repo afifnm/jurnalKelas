@@ -16,13 +16,15 @@ class DashboardController extends Controller
         $tahunAktif = TahunAjaran::aktif();
         $hariIni    = now()->dayOfWeekIso;
 
-        $jadwalMinggu = Jadwal::with(['kelas', 'mapel'])
+        $jadwalMinggu = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['kelas', 'mapel', 'jamPelajaran'])
             ->where('guru_id', $guru->id)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
-            ->orderBy('hari')
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.hari')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get()
-            ->groupBy('hari');
+            ->groupBy(fn($j) => $j->jamPelajaran->hari);
 
         $jadwalHariIni = $jadwalMinggu->get($hariIni, collect());
 

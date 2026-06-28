@@ -28,17 +28,19 @@ class JadwalViewController extends Controller
         $tahunId  = $request->tahun_ajaran_id ?? $tahunAktif?->id;
         $kelasId  = $request->kelas_id ?? $kelasList->first()?->id;
 
-        $allJadwalKelas = Jadwal::with(['guru', 'mapel'])
+        $allJadwalKelas = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['guru', 'mapel', 'jamPelajaran'])
             ->whereIn('kelas_id', $kelasList->pluck('id'))
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('hari')
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.hari')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get()
             ->groupBy('kelas_id');
 
         $jadwalPerKelas = collect();
         foreach ($kelasList as $kelas) {
-            $jadwal = $allJadwalKelas->get($kelas->id, collect())->groupBy('hari');
+            $jadwal = $allJadwalKelas->get($kelas->id, collect())->groupBy(fn($j) => $j->jamPelajaran->hari);
             $jadwalPerKelas[$kelas->id] = [
                 'kelas'  => $kelas,
                 'jadwal' => $jadwal,
@@ -68,17 +70,19 @@ class JadwalViewController extends Controller
         $tahunId = $request->tahun_ajaran_id ?? $tahunAktif?->id;
         $guruId  = $request->guru_id ?? $guruList->first()?->id;
 
-        $allJadwalGuru = Jadwal::with(['kelas', 'mapel'])
+        $allJadwalGuru = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['kelas', 'mapel', 'jamPelajaran'])
             ->whereIn('guru_id', $guruList->pluck('id'))
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('hari')
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.hari')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get()
             ->groupBy('guru_id');
 
         $jadwalPerGuru = collect();
         foreach ($guruList as $guru) {
-            $jadwal = $allJadwalGuru->get($guru->id, collect())->groupBy('hari');
+            $jadwal = $allJadwalGuru->get($guru->id, collect())->groupBy(fn($j) => $j->jamPelajaran->hari);
             $jadwalPerGuru[$guru->id] = [
                 'guru'   => $guru,
                 'jadwal' => $jadwal,
@@ -112,11 +116,10 @@ class JadwalViewController extends Controller
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
             ->get();
             
-        // Map jadwal by [hari]-[jam_mulai]-[jam_selesai] for easy lookup
+        // Map jadwal by jam_pelajaran_id for easy lookup
         $jadwalPerSlot = [];
         foreach ($jadwal as $j) {
-            $key = $j->hari . '-' . substr($j->jam_mulai, 0, 5) . '-' . substr($j->jam_selesai, 0, 5);
-            $jadwalPerSlot[$key] = $j;
+            $jadwalPerSlot[$j->jam_pelajaran_id] = $j;
         }
 
         $guru         = User::role('guru')->where('is_active', true)->orderBy('nama')->get();
@@ -138,10 +141,12 @@ class JadwalViewController extends Controller
         $tahunAktif = TahunAjaran::find($tahunId);
         $namaHari   = Jadwal::getNamaHariList();
 
-        $allJadwal = Jadwal::with(['guru', 'mapel', 'kelas'])
+        $allJadwal = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['guru', 'mapel', 'kelas', 'jamPelajaran'])
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('hari')
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.hari')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get();
 
         // Kelas yang punya jadwal
@@ -150,20 +155,21 @@ class JadwalViewController extends Controller
                 $q->when($tahunId, fn($q2) => $q2->where('tahun_ajaran_id', $tahunId))
             )->get();
 
-        // [hariNum => [slot_key => [kelas_id => jadwal]]]
-        $jadwalByHari = $allJadwal->groupBy('hari')->map(function ($byHari) {
+        // [hariNum => [jam_mulai|jam_selesai => [kelas_id => jadwal]]]
+        $jadwalByHari = $allJadwal->groupBy(fn($j) => $j->jamPelajaran->hari)->map(function ($byHari) {
             return $byHari
-                ->groupBy(fn($j) => $j->jam_mulai . '|' . $j->jam_selesai)
-                ->sortKeys()
+                ->groupBy(fn($j) => $j->jamPelajaran->jam_mulai . '|' . $j->jamPelajaran->jam_selesai)
                 ->map(fn($bySlot) => $bySlot->keyBy('kelas_id'));
         });
 
         $mapelUsed = $allJadwal->pluck('mapel')->unique('id')->sortBy('nama')->values();
-        $guruUsed  = $allJadwal->pluck('guru')->unique('id')->sortBy('nama')->values();
+        $guruUsed  = $allJadwal->pluck('guru')->unique('id')->sortBy('username')->values();
+
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get()->groupBy('hari');
 
         return view('admin.jadwal.print.semua', compact(
             'sekolah', 'tahunAktif', 'namaHari',
-            'kelasList', 'jadwalByHari', 'mapelUsed', 'guruUsed'
+            'kelasList', 'jadwalByHari', 'mapelUsed', 'guruUsed', 'jamPelajaran'
         ));
     }
 
@@ -174,15 +180,19 @@ class JadwalViewController extends Controller
         $tahunAktif = TahunAjaran::find($tahunId);
         $namaHari   = Jadwal::getNamaHariList();
 
-        $jadwal = Jadwal::with(['kelas', 'mapel'])
+        $jadwal = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['kelas', 'mapel', 'jamPelajaran'])
             ->where('guru_id', $guru->id)
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('hari')
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.hari')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get()
-            ->groupBy('hari');
+            ->groupBy(fn($j) => $j->jamPelajaran->hari);
 
-        return view('admin.jadwal.print.guru', compact('sekolah', 'tahunAktif', 'guru', 'jadwal', 'namaHari'));
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get()->groupBy('hari');
+
+        return view('admin.jadwal.print.guru', compact('sekolah', 'tahunAktif', 'guru', 'jadwal', 'namaHari', 'jamPelajaran'));
     }
 
     public function printKelas(Request $request, Kelas $kelas): View
@@ -192,15 +202,19 @@ class JadwalViewController extends Controller
         $tahunAktif = TahunAjaran::find($tahunId);
         $namaHari   = Jadwal::getNamaHariList();
 
-        $jadwal = Jadwal::with(['guru', 'mapel'])
+        $jadwal = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['guru', 'mapel', 'jamPelajaran'])
             ->where('kelas_id', $kelas->id)
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('hari')
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.hari')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get()
-            ->groupBy('hari');
+            ->groupBy(fn($j) => $j->jamPelajaran->hari);
 
-        return view('admin.jadwal.print.kelas', compact('sekolah', 'tahunAktif', 'kelas', 'jadwal', 'namaHari'));
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get()->groupBy('hari');
+
+        return view('admin.jadwal.print.kelas', compact('sekolah', 'tahunAktif', 'kelas', 'jadwal', 'namaHari', 'jamPelajaran'));
     }
 
     public function laporanJurnalKelas(Request $request, Kelas $kelas): View
@@ -214,10 +228,12 @@ class JadwalViewController extends Controller
         $sampai = $request->tanggal_sampai ? Carbon::parse($request->tanggal_sampai) : now()->endOfWeek();
 
         // Load all jadwal for this kelas (no date filter – jadwal is recurring)
-        $allJadwal = Jadwal::with(['guru', 'mapel'])
+        $allJadwal = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['guru', 'mapel', 'jamPelajaran'])
             ->where('kelas_id', $kelas->id)
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get();
 
         // Pre-load all jurnal in the period to avoid N+1
@@ -235,7 +251,7 @@ class JadwalViewController extends Controller
 
         while ($current->lte($end)) {
             $hariNum    = $current->dayOfWeekIso;
-            $jadwalHari = $allJadwal->where('hari', $hariNum)->sortBy('jam_mulai');
+            $jadwalHari = $allJadwal->filter(fn($j) => $j->jamPelajaran->hari == $hariNum)->sortBy(fn($j) => $j->jamPelajaran->jam_ke);
 
             if ($jadwalHari->isNotEmpty()) {
                 $entries = [];
@@ -272,10 +288,12 @@ class JadwalViewController extends Controller
         $dari   = $request->tanggal_dari   ? Carbon::parse($request->tanggal_dari)   : now()->startOfWeek();
         $sampai = $request->tanggal_sampai ? Carbon::parse($request->tanggal_sampai) : now()->endOfWeek();
 
-        $allJadwal = Jadwal::with(['kelas', 'mapel'])
+        $allJadwal = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['kelas', 'mapel', 'jamPelajaran'])
             ->where('guru_id', $guru->id)
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get();
 
         $allJurnal = Jurnal::where('guru_id', $guru->id)
@@ -292,7 +310,7 @@ class JadwalViewController extends Controller
 
         while ($current->lte($end)) {
             $hariNum    = $current->dayOfWeekIso;
-            $jadwalHari = $allJadwal->where('hari', $hariNum)->sortBy('jam_mulai');
+            $jadwalHari = $allJadwal->filter(fn($j) => $j->jamPelajaran->hari == $hariNum)->sortBy(fn($j) => $j->jamPelajaran->jam_ke);
 
             if ($jadwalHari->isNotEmpty()) {
                 $entries = [];
@@ -325,25 +343,24 @@ class JadwalViewController extends Controller
             return [];
         }
 
-        $semua = Jadwal::where('tahun_ajaran_id', $tahunId)
-            ->select('id', 'guru_id', 'kelas_id', 'hari', 'jam_mulai', 'jam_selesai')
-            ->orderBy('hari')
-            ->orderBy('jam_mulai')
-            ->get();
+        $semuaGrouped = Jadwal::where('tahun_ajaran_id', $tahunId)
+            ->select('id', 'guru_id', 'kelas_id', 'jam_pelajaran_id')
+            ->get()
+            ->groupBy('jam_pelajaran_id');
 
         $konflikIds = [];
 
-        foreach ($semua as $a) {
-            foreach ($semua as $b) {
-                if ($a->id === $b->id) continue;
-                if ($a->hari !== $b->hari) continue;
-
-                $overlap = $a->jam_mulai < $b->jam_selesai && $a->jam_selesai > $b->jam_mulai;
-                if (! $overlap) continue;
-
-                if ($a->guru_id === $b->guru_id || $a->kelas_id === $b->kelas_id) {
-                    $konflikIds[$a->id] = true;
-                    $konflikIds[$b->id] = true;
+        foreach ($semuaGrouped as $slotJadwal) {
+            $slotJadwal = $slotJadwal->values();
+            $count = $slotJadwal->count();
+            for ($i = 0; $i < $count; $i++) {
+                for ($j = $i + 1; $j < $count; $j++) {
+                    $a = $slotJadwal[$i];
+                    $b = $slotJadwal[$j];
+                    if ($a->guru_id === $b->guru_id || $a->kelas_id === $b->kelas_id) {
+                        $konflikIds[$a->id] = true;
+                        $konflikIds[$b->id] = true;
+                    }
                 }
             }
         }

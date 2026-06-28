@@ -29,11 +29,13 @@ class AppServiceProvider extends ServiceProvider
             $count      = 0;
 
             if ($user->hasRole('guru')) {
-                $jadwalHariIni = Jadwal::with(['kelas', 'mapel'])
+                $jadwalHariIni = Jadwal::select('jadwal.*')
+                    ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+                    ->with(['kelas', 'mapel', 'jamPelajaran'])
                     ->where('guru_id', $user->id)
-                    ->where('hari', $hariIni)
+                    ->where('jam_pelajaran.hari', $hariIni)
                     ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
-                    ->orderBy('jam_mulai')
+                    ->orderBy('jam_pelajaran.jam_ke')
                     ->get();
 
                 $sudahDiisi = Jurnal::where('guru_id', $user->id)
@@ -46,14 +48,16 @@ class AppServiceProvider extends ServiceProvider
 
                 foreach ($belumDiisi as $j) {
                     $items[] = [
-                        'text'  => substr($j->jam_mulai, 0, 5) . ' — ' . $j->mapel->nama . ' (' . $j->kelas->nama . ')',
+                        'text'  => substr($j->jamPelajaran->jam_mulai, 0, 5) . ' — ' . $j->mapel->nama . ' (' . $j->kelas->nama . ')',
                         'route' => route('guru.jurnal.create', ['jadwal_id' => $j->id]),
                     ];
                 }
 
             } elseif ($user->hasRole('admin') || $user->hasRole('ks')) {
-                $guruBelumIsi = Jadwal::with('guru')
-                    ->where('hari', $hariIni)
+                $guruBelumIsi = Jadwal::select('jadwal.*')
+                    ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+                    ->with(['guru', 'jamPelajaran'])
+                    ->where('jam_pelajaran.hari', $hariIni)
                     ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
                     ->whereDoesntHave('jurnal', fn($q) => $q->whereDate('tanggal', today()))
                     ->get()

@@ -282,7 +282,7 @@
             <tbody>
               @foreach($jadwalHari as $j)
               <tr>
-                <td class="td-jam">{{ substr($j->jam_mulai,0,5) }} – {{ substr($j->jam_selesai,0,5) }}</td>
+                <td class="td-jam">{{ substr($j->jamPelajaran->jam_mulai,0,5) }} – {{ substr($j->jamPelajaran->jam_selesai,0,5) }}</td>
                 <td class="td-mapel">{{ $j->mapel->nama }}</td>
                 <td class="td-kelas">Kelas {{ $j->kelas->nama }}</td>
               </tr>

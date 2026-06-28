@@ -18,9 +18,7 @@ class StoreJadwalRequest extends FormRequest
             'kelas_id'        => ['required', 'exists:kelas,id'],
             'mapel_id'        => ['required', 'exists:mapel,id'],
             'tahun_ajaran_id' => ['required', 'exists:tahun_ajaran,id'],
-            'hari'            => ['required', 'integer', 'min:1', 'max:7'],
-            'jam_mulai'       => ['required', 'date_format:H:i'],
-            'jam_selesai'     => ['required', 'date_format:H:i', 'after:jam_mulai'],
+            'jam_pelajaran_id'=> ['required', 'exists:jam_pelajaran,id'],
         ];
     }
 }

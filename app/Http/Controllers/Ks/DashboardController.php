@@ -18,7 +18,7 @@ class DashboardController extends Controller
 
         $totalGuru = User::role('guru')->where('is_active', true)->count();
 
-        $jadwalHariIni = Jadwal::where('hari', $hariIni)
+        $jadwalHariIni = Jadwal::whereHas('jamPelajaran', fn($q) => $q->where('hari', $hariIni))
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->pluck('guru_id')
             ->unique();

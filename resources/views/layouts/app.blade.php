@@ -36,6 +36,7 @@
     </script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('styles')
 </head>
 <body class="min-h-full bg-slate-50 dark:bg-zinc-950 font-sans antialiased" style="font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;">
 

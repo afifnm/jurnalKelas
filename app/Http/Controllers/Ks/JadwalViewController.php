@@ -21,17 +21,19 @@ class JadwalViewController extends Controller
 
         $tahunId = $request->tahun_ajaran_id ?? $tahunAktif?->id;
 
-        $allJadwalKelas = Jadwal::with(['guru', 'mapel'])
+        $allJadwalKelas = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['guru', 'mapel', 'jamPelajaran'])
             ->whereIn('kelas_id', $kelasList->pluck('id'))
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('hari')
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.hari')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get()
             ->groupBy('kelas_id');
 
         $jadwalPerKelas = collect();
         foreach ($kelasList as $kelas) {
-            $jadwal = $allJadwalKelas->get($kelas->id, collect())->groupBy('hari');
+            $jadwal = $allJadwalKelas->get($kelas->id, collect())->groupBy(fn($j) => $j->jamPelajaran->hari);
             $jadwalPerKelas[$kelas->id] = [
                 'kelas'  => $kelas,
                 'jadwal' => $jadwal,
@@ -54,17 +56,19 @@ class JadwalViewController extends Controller
 
         $tahunId = $request->tahun_ajaran_id ?? $tahunAktif?->id;
 
-        $allJadwalGuru = Jadwal::with(['kelas', 'mapel'])
+        $allJadwalGuru = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['kelas', 'mapel', 'jamPelajaran'])
             ->whereIn('guru_id', $guruList->pluck('id'))
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('hari')
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.hari')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get()
             ->groupBy('guru_id');
 
         $jadwalPerGuru = collect();
         foreach ($guruList as $guru) {
-            $jadwal = $allJadwalGuru->get($guru->id, collect())->groupBy('hari');
+            $jadwal = $allJadwalGuru->get($guru->id, collect())->groupBy(fn($j) => $j->jamPelajaran->hari);
             $jadwalPerGuru[$guru->id] = [
                 'guru'   => $guru,
                 'jadwal' => $jadwal,

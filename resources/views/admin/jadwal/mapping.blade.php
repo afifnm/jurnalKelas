@@ -152,7 +152,7 @@
                             @php
                                 $mulai   = substr($slot->jam_mulai, 0, 5);
                                 $selesai = substr($slot->jam_selesai, 0, 5);
-                                $slotKey = $hariNum . '-' . $mulai . '-' . $selesai;
+                                $slotKey = $slot->id;
                             @endphp
 
                             {{-- Drop Zone --}}
@@ -447,7 +447,7 @@ function mappingManager() {
                 const res = await fetch('{{ route('admin.jadwal.store') }}', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-                    body: JSON.stringify({ tahun_ajaran_id: this.tahunId, kelas_id: this.kelasId, guru_id, mapel_id, hari, jam_mulai: mulai, jam_selesai: selesai, overwrite_id: overWrittenId })
+                    body: JSON.stringify({ tahun_ajaran_id: this.tahunId, kelas_id: this.kelasId, guru_id, mapel_id, jam_pelajaran_id: slotKey, overwrite_id: overWrittenId })
                 });
                 const responseData = await res.json();
                 if (!res.ok) {
@@ -470,7 +470,7 @@ function mappingManager() {
                 const res = await fetch(`/admin/jadwal/${jadwalId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
-                    body: JSON.stringify({ tahun_ajaran_id: this.tahunId, kelas_id: this.kelasId, guru_id, mapel_id, hari, jam_mulai: mulai, jam_selesai: selesai, overwrite_id: overWrittenId })
+                    body: JSON.stringify({ tahun_ajaran_id: this.tahunId, kelas_id: this.kelasId, guru_id, mapel_id, jam_pelajaran_id: slotKey, overwrite_id: overWrittenId })
                 });
                 const responseData = await res.json();
                 if (!res.ok) {

@@ -94,7 +94,7 @@
 
             {{-- List jadwal hari ini --}}
             <div class="space-y-1.5 px-4 pb-3">
-                @foreach($jadwalHari->sortBy('jam_mulai') as $j)
+                @foreach($jadwalHari->sortBy(fn($j) => $j->jamPelajaran->jam_ke) as $j)
                 <div class="flex items-center gap-3 p-3 rounded-xl
                     {{ $hariNum == $hariIni
                         ? 'bg-white dark:bg-zinc-800/70 border border-amber-100 dark:border-amber-900/30 shadow-sm'
@@ -103,13 +103,13 @@
                     {{-- Jam --}}
                     <div class="text-center w-[4.5rem] flex-shrink-0">
                         <p class="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono">
-                            {{ substr($j->jam_mulai, 0, 5) }}
+                            {{ substr($j->jamPelajaran->jam_mulai, 0, 5) }}
                         </p>
                         <div class="flex items-center justify-center my-0.5">
                             <div class="h-px w-4 bg-slate-300 dark:bg-zinc-600"></div>
                         </div>
                         <p class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
-                            {{ substr($j->jam_selesai, 0, 5) }}
+                            {{ substr($j->jamPelajaran->jam_selesai, 0, 5) }}
                         </p>
                     </div>
 

@@ -34,7 +34,7 @@
             <span class="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm border-green-200 dark:border-green-800/40 bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 opacity-70 cursor-default">
                 <i data-lucide="check-circle-2" class="w-4 h-4"></i>
                 <span class="font-medium">{{ $j->mapel->nama }}</span>
-                <span class="text-xs opacity-70">{{ $j->kelas->nama }} {{ substr($j->jam_mulai,0,5) }}</span>
+                <span class="text-xs opacity-70">{{ $j->kelas->nama }} {{ substr($j->jamPelajaran->jam_mulai,0,5) }}</span>
                 <span class="text-[10px] bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full font-medium">Sudah diisi</span>
             </span>
             @else
@@ -42,7 +42,7 @@
                class="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50">
                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
                 <span class="font-medium">{{ $j->mapel->nama }}</span>
-                <span class="text-xs opacity-70">{{ $j->kelas->nama }} {{ substr($j->jam_mulai,0,5) }}</span>
+                <span class="text-xs opacity-70">{{ $j->kelas->nama }} {{ substr($j->jamPelajaran->jam_mulai,0,5) }}</span>
             </a>
             @endif
             @endforeach

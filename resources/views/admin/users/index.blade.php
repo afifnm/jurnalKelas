@@ -424,7 +424,12 @@ function userManager() {
             };
             this.errors = {}; this.errorMsg = '';
             this.modal = true;
-            this.$nextTick(() => lucide.createIcons());
+            this.$nextTick(() => {
+                lucide.createIcons();
+                this.$root.querySelectorAll('select').forEach(el => {
+                    if (el.tomselect) el.tomselect.setValue(el.value);
+                });
+            });
         },
 
         async submitForm() {

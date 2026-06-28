@@ -91,15 +91,13 @@ class TahunAjaranController extends Controller
         $now = now();
         foreach ($source->jadwal as $j) {
             $jadwalData[] = [
-                'guru_id'         => $j->guru_id,
-                'kelas_id'        => $j->kelas_id,
-                'mapel_id'        => $j->mapel_id,
-                'tahun_ajaran_id' => $tahunAjaran->id,
-                'hari'            => $j->hari,
-                'jam_mulai'       => $j->jam_mulai,
-                'jam_selesai'     => $j->jam_selesai,
-                'created_at'      => $now,
-                'updated_at'      => $now,
+                'guru_id'          => $j->guru_id,
+                'kelas_id'         => $j->kelas_id,
+                'mapel_id'         => $j->mapel_id,
+                'tahun_ajaran_id'  => $tahunAjaran->id,
+                'jam_pelajaran_id' => $j->jam_pelajaran_id,
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ];
         }
 
@@ -111,5 +109,141 @@ class TahunAjaranController extends Controller
         return response()->json([
             'message' => "Berhasil menyalin {$count} jadwal dari {$source->label} ke {$tahunAjaran->label}.",
         ]);
+    }
+
+    public function generateJadwal(Request $request, TahunAjaran $tahunAjaran): JsonResponse
+    {
+        $tahunAjaran->jadwal()->forceDelete();
+
+        $tugasMengajars = \App\Models\TugasMengajar::where('tahun_ajaran_id', $tahunAjaran->id)->get();
+        $jamPelajarans  = \App\Models\JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get();
+
+        if ($tugasMengajars->isEmpty() || $jamPelajarans->isEmpty()) {
+            return response()->json(['message' => 'Tidak ada tugas mengajar atau jam pelajaran yang tersedia.', 'gagal' => 0]);
+        }
+
+        // $slotIds[$hari][$jam_ke] = jam_pelajaran_id
+        // $hariSlots[$hari] = [jam_ke, ...] berurutan
+        $slotIds   = [];
+        $hariSlots = [];
+        foreach ($jamPelajarans as $jp) {
+            $slotIds[$jp->hari][$jp->jam_ke] = $jp->id;
+            $hariSlots[$jp->hari][]          = $jp->jam_ke;
+        }
+        $hariList = array_keys($hariSlots);
+
+        // MRV: tugas paling ketat (jumlah_jam besar) dikerjakan duluan
+        $sorted = $tugasMengajars->sortByDesc('jumlah_jam')->values();
+
+        $opsi      = $request->input('opsi', 'all_at_once'); // 'max_4' | 'all_at_once'
+        // Maksimal jam berturut-turut per hari untuk opsi pemisahan (default 4, rentang 1–10)
+        $maxJam    = (int) $request->input('max_jam', 4);
+        if ($maxJam < 1)  $maxJam = 1;
+        if ($maxJam > 10) $maxJam = 10;
+        $busyGuru  = []; // "{guru_id}:{hari}:{jam_ke}" = true
+        $busyKelas = []; // "{kelas_id}:{hari}:{jam_ke}" = true
+
+        $jadwalInserts = [];
+        $now           = now();
+        $gagalHitung   = 0;
+
+        // Cari N slot consecutive di satu hari yang bebas untuk guru & kelas.
+        $findConsecutive = function (int $hari, int $n, int $guruId, int $kelasId) use ($hariSlots, &$busyGuru, &$busyKelas): ?array {
+            $consecutive = [];
+            foreach ($hariSlots[$hari] as $jam_ke) {
+                if (isset($busyGuru["{$guruId}:{$hari}:{$jam_ke}"]) || isset($busyKelas["{$kelasId}:{$hari}:{$jam_ke}"])) {
+                    $consecutive = [];
+                    continue;
+                }
+                $consecutive[] = $jam_ke;
+                if (count($consecutive) === $n) return $consecutive;
+            }
+            return null;
+        };
+
+        // Tandai slot dan tambahkan ke jadwalInserts.
+        $placeSlots = function (int $hari, array $slots, object $tugas) use (&$busyGuru, &$busyKelas, &$jadwalInserts, $slotIds, $tahunAjaran, $now): void {
+            foreach ($slots as $jam_ke) {
+                $busyGuru["{$tugas->guru_id}:{$hari}:{$jam_ke}"]   = true;
+                $busyKelas["{$tugas->kelas_id}:{$hari}:{$jam_ke}"] = true;
+                $jadwalInserts[] = [
+                    'guru_id'          => $tugas->guru_id,
+                    'kelas_id'         => $tugas->kelas_id,
+                    'mapel_id'         => $tugas->mapel_id,
+                    'tahun_ajaran_id'  => $tahunAjaran->id,
+                    'jam_pelajaran_id' => $slotIds[$hari][$jam_ke],
+                    'created_at'       => $now,
+                    'updated_at'       => $now,
+                ];
+            }
+        };
+
+        foreach ($sorted as $tugas) {
+            $total = (int) $tugas->jumlah_jam;
+            if ($total <= 0) continue;
+
+            if ($opsi === 'all_at_once') {
+                // Semua JP harus consecutive dalam 1 hari, tidak boleh dipecah
+                $placed = false;
+                foreach ($hariList as $hari) {
+                    $slots = $findConsecutive($hari, $total, $tugas->guru_id, $tugas->kelas_id);
+                    if ($slots === null) continue;
+                    $placeSlots($hari, $slots, $tugas);
+                    $placed = true;
+                    break;
+                }
+                if (!$placed) $gagalHitung++;
+            } else {
+                // pecah jadi chunk ≤ $maxJam, tiap chunk di hari berbeda (preferensi)
+                $chunks = [];
+                $sisa   = $total;
+                while ($sisa > 0) {
+                    $chunks[] = min($maxJam, $sisa);
+                    $sisa    -= min($maxJam, $sisa);
+                }
+
+                $hariTerpakai = [];
+                foreach ($chunks as $chunk) {
+                    $placed = false;
+
+                    // Utamakan hari yang belum dipakai tugas ini
+                    foreach ($hariList as $hari) {
+                        if (in_array($hari, $hariTerpakai, true)) continue;
+                        $slots = $findConsecutive($hari, $chunk, $tugas->guru_id, $tugas->kelas_id);
+                        if ($slots === null) continue;
+                        $placeSlots($hari, $slots, $tugas);
+                        $hariTerpakai[] = $hari;
+                        $placed         = true;
+                        break;
+                    }
+
+                    // Fallback: boleh hari yang sudah dipakai jika tidak ada pilihan lain
+                    if (!$placed) {
+                        foreach ($hariList as $hari) {
+                            $slots = $findConsecutive($hari, $chunk, $tugas->guru_id, $tugas->kelas_id);
+                            if ($slots === null) continue;
+                            $placeSlots($hari, $slots, $tugas);
+                            $hariTerpakai[] = $hari;
+                            $placed         = true;
+                            break;
+                        }
+                    }
+
+                    if (!$placed) $gagalHitung++;
+                }
+            }
+        }
+
+        foreach (array_chunk($jadwalInserts, 500) as $batch) {
+            Jadwal::insert($batch);
+        }
+
+        $berhasil = count($jadwalInserts);
+        $message  = "Berhasil menyusun {$berhasil} jadwal.";
+        if ($gagalHitung > 0) {
+            $message .= " Namun {$gagalHitung} chunk jam tidak dapat dijadwalkan karena tidak ada slot consecutive yang tersedia.";
+        }
+
+        return response()->json(['message' => $message, 'gagal' => $gagalHitung]);
     }
 }

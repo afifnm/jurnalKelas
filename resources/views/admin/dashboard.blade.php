@@ -14,7 +14,7 @@
 
     $jamNow = now()->format('H:i:s');
     $sedangMengajar = $jadwalHariIni->filter(
-        fn($j) => $j->jam_mulai <= $jamNow && $j->jam_selesai > $jamNow
+        fn($j) => $j->jamPelajaran->jam_mulai <= $jamNow && $j->jamPelajaran->jam_selesai > $jamNow
     );
 @endphp
 
@@ -135,7 +135,7 @@
                     <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">{{ $j->guru->nama }}</p>
                     <p class="text-[10px] text-slate-400 dark:text-zinc-500 truncate">{{ $j->mapel->nama }} · Kelas {{ $j->kelas->nama }}</p>
                 </div>
-                <span class="text-[10px] font-mono text-slate-400 dark:text-zinc-500 flex-shrink-0">{{ substr($j->jam_mulai,0,5) }}–{{ substr($j->jam_selesai,0,5) }}</span>
+                <span class="text-[10px] font-mono text-slate-400 dark:text-zinc-500 flex-shrink-0">{{ substr($j->jamPelajaran->jam_mulai,0,5) }}–{{ substr($j->jamPelajaran->jam_selesai,0,5) }}</span>
             </div>
             @endforeach
             @if($sedangMengajar->count() > 5)

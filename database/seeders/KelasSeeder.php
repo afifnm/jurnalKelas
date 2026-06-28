@@ -9,14 +9,12 @@ class KelasSeeder extends Seeder
 {
     public function run(): void
     {
-        $jurusan = ['RPL', 'TKJ', 'AKL', 'OTKP'];
         $tingkat = ['X', 'XI', 'XII'];
+        $jurusan = ['MA', 'MB', 'MC', 'TA', 'TB', 'TC', 'OA', 'OB', 'OC', 'RA', 'RB', 'RC'];
         
         foreach ($tingkat as $t) {
             foreach ($jurusan as $j) {
-                for ($i = 1; $i <= 2; $i++) {
-                    Kelas::create(['nama' => "$t $j $i"]);
-                }
+                Kelas::create(['nama' => "$t $j"]);
             }
         }
     }

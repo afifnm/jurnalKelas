@@ -227,7 +227,7 @@
                         @endif
                     </div>
                     <div class="pb-2 space-y-1.5 px-5">
-                        @foreach($jadwalHari->sortBy('jam_mulai') as $j)
+                        @foreach($jadwalHari->sortBy(fn($j) => $j->jamPelajaran->jam_ke) as $j)
                         @php $isBentrok = in_array($j->id, $konflikIds); @endphp
                         <div data-jadwal-id="{{ $j->id }}" class="flex items-center gap-3 p-3 rounded-xl
                             {{ $isBentrok
@@ -236,8 +236,8 @@
                                     ? 'bg-white dark:bg-zinc-800/60 border border-amber-100 dark:border-amber-900/30'
                                     : 'bg-slate-50 dark:bg-zinc-800/40') }}">
                             <div class="text-center w-20 flex-shrink-0">
-                                <p class="text-xs font-bold {{ $isBentrok ? 'text-orange-600 dark:text-orange-400' : 'text-amber-600 dark:text-amber-400' }} font-mono">{{ substr($j->jam_mulai, 0, 5) }}</p>
-                                <p class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">{{ substr($j->jam_selesai, 0, 5) }}</p>
+                                <p class="text-xs font-bold {{ $isBentrok ? 'text-orange-600 dark:text-orange-400' : 'text-amber-600 dark:text-amber-400' }} font-mono">{{ substr($j->jamPelajaran->jam_mulai, 0, 5) }}</p>
+                                <p class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">{{ substr($j->jamPelajaran->jam_selesai, 0, 5) }}</p>
                             </div>
                             <div class="w-px h-8 bg-slate-200 dark:bg-zinc-700 flex-shrink-0"></div>
                             <div class="flex-1 min-w-0">
@@ -514,12 +514,18 @@ function jadwalManager() {
             this.form.jam_selesai = '';
         },
 
-        onJamKeChange() {
+                onJamKeChange() {
             const slot = this.jamSlots.find(s => String(s.jam_ke) === String(this.form.jam_ke));
             if (slot) {
                 this.form.jam_mulai   = (slot.jam_mulai   || '').substring(0, 5);
                 this.form.jam_selesai = (slot.jam_selesai || '').substring(0, 5);
+                this.form.jam_pelajaran_id = String(slot.id);
+            } else {
+                this.form.jam_mulai   = '';
+                this.form.jam_selesai = '';
+                this.form.jam_pelajaran_id = '';
             }
+        },
         },
 
         openCreate(guruId, tahunAjaranId) {
@@ -546,25 +552,32 @@ function jadwalManager() {
         openEdit(item) {
             this.mode   = 'edit';
             this.editId = item.id;
-            const hariNum = parseInt(item.hari);
+            const hariNum = parseInt(item.jam_pelajaran?.hari);
             this.jamSlots = allJamSlots.filter(s => s.hari === hariNum);
             const slot = this.jamSlots.find(s =>
-                s.jam_mulai.substring(0, 5) === (item.jam_mulai || '').substring(0, 5)
+                s.jam_mulai.substring(0, 5) === (item.jam_pelajaran?.jam_mulai || '').substring(0, 5)
             );
             this.form = {
                 guru_id:         String(item.guru_id),
                 kelas_id:        String(item.kelas_id),
                 mapel_id:        String(item.mapel_id),
-                hari:            String(item.hari),
+                hari:            String(item.jam_pelajaran?.hari),
                 jam_ke:          slot ? String(slot.jam_ke) : '',
-                jam_mulai:       (item.jam_mulai  || '').substring(0, 5),
-                jam_selesai:     (item.jam_selesai || '').substring(0, 5),
+                jam_pelajaran_id: slot ? String(slot.id) : '',
+                jam_mulai:       (item.jam_pelajaran?.jam_mulai  || '').substring(0, 5),
+                jam_selesai:     (item.jam_pelajaran?.jam_selesai || '').substring(0, 5),
                 tahun_ajaran_id: String(item.tahun_ajaran_id),
             };
             this.errors   = {};
             this.errorMsg = '';
             this.warningMsg = '';
             this.modal = true;
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                document.querySelectorAll('.fixed.inset-0 select').forEach(el => {
+                    if (el.tomselect) el.tomselect.setValue(el.value);
+                });
+            });
         },
 
         closeModalAndReset() {
@@ -651,10 +664,10 @@ function jadwalManager() {
         },
 
         insertJadwalCard(jadwal, warnings) {
-            const hariNum   = parseInt(jadwal.hari);
+            const hariNum   = parseInt(jadwal.jam_pelajaran?.hari);
             const isBentrok = warnings.length > 0;
-            const jamMulai  = (jadwal.jam_mulai  || '').substring(0, 5);
-            const jamSelesai = (jadwal.jam_selesai || '').substring(0, 5);
+            const jamMulai  = (jadwal.jam_pelajaran?.jam_mulai  || '').substring(0, 5);
+            const jamSelesai = (jadwal.jam_pelajaran?.jam_selesai || '').substring(0, 5);
             const isHariIni = hariNum === hariIni;
             const kelasNama = kelasMap[jadwal.kelas_id]?.nama  || jadwal.kelas?.nama  || '?';
             const mapelNama = mapelMap[jadwal.mapel_id]?.nama  || jadwal.mapel?.nama  || '?';
@@ -732,11 +745,11 @@ function jadwalManager() {
             if (!existingCard) { location.reload(); return; }
 
             const oldHari = parseInt(existingCard.closest('[data-hari]')?.dataset?.hari);
-            const newHari = parseInt(jadwal.hari);
+            const newHari = parseInt(jadwal.jam_pelajaran?.hari);
             if (oldHari !== newHari) { existingCard.remove(); this.insertJadwalCard(jadwal, warnings); return; }
 
-            const jamMulai   = (jadwal.jam_mulai  || '').substring(0, 5);
-            const jamSelesai = (jadwal.jam_selesai || '').substring(0, 5);
+            const jamMulai   = (jadwal.jam_pelajaran?.jam_mulai  || '').substring(0, 5);
+            const jamSelesai = (jadwal.jam_pelajaran?.jam_selesai || '').substring(0, 5);
             const mapelNama  = mapelMap[jadwal.mapel_id]?.nama || jadwal.mapel?.nama || '?';
             const kelasNama  = kelasMap[jadwal.kelas_id]?.nama || jadwal.kelas?.nama || '?';
 

@@ -18,7 +18,7 @@
 
     // Jam masuk default: manual → jam_mulai, auto → $autoJamMasuk, kosong → ''
     $defaultJamMasuk = old('jam_masuk_aktual',
-        $selectedJadwal   ? substr($selectedJadwal->jam_mulai, 0, 5)
+        $selectedJadwal   ? substr($selectedJadwal->jamPelajaran->jam_mulai, 0, 5)
         : ($autoFilledJadwal ? $autoJamMasuk : '')
     );
 
@@ -55,7 +55,7 @@
                 Berdasarkan jadwal mengajar Anda saat ini:
                 <span class="font-semibold">{{ $autoFilledJadwal->mapel->nama }}</span>
                 di <span class="font-semibold">{{ $autoFilledJadwal->kelas->nama }}</span>
-                ({{ substr($autoFilledJadwal->jam_mulai, 0, 5) }}–{{ substr($autoFilledJadwal->jam_selesai, 0, 5) }})
+                ({{ substr($autoFilledJadwal->jamPelajaran->jam_mulai, 0, 5) }}–{{ substr($autoFilledJadwal->jamPelajaran->jam_selesai, 0, 5) }})
             </p>
             <p class="text-xs text-green-500 dark:text-green-600 mt-1">Periksa kembali dan sesuaikan jika perlu sebelum menyimpan.</p>
         </div>
@@ -73,7 +73,7 @@
             @foreach($jadwalHariIni as $j)
             @php $sudah = in_array($j->id, $sudahDiisiHariIni); @endphp
             <button type="button"
-                @click="{{ $sudah ? '' : "selectJadwal({$j->id}, {$j->kelas_id}, {$j->mapel_id}, '{$j->jam_mulai}', '{$j->jam_selesai}')" }}"
+                @click="{{ $sudah ? '' : "selectJadwal({$j->id}, {$j->kelas_id}, {$j->mapel_id}, '{$j->jamPelajaran->jam_mulai}', '{$j->jamPelajaran->jam_selesai}')" }}"
                 :class="selectedJadwalId == '{{ $j->id }}' ? 'ring-2 ring-amber-400 ring-offset-1 dark:ring-offset-zinc-900' : ''"
                 class="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all
                     {{ $sudah
@@ -81,7 +81,7 @@
                         : 'border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50 cursor-pointer' }}">
                 <i data-lucide="{{ $sudah ? 'check-circle-2' : 'calendar-plus' }}" class="w-4 h-4 flex-shrink-0"></i>
                 <span class="font-medium">{{ $j->mapel->nama }}</span>
-                <span class="text-xs opacity-70">{{ $j->kelas->nama }} · {{ substr($j->jam_mulai,0,5) }}–{{ substr($j->jam_selesai,0,5) }}</span>
+                <span class="text-xs opacity-70">{{ $j->kelas->nama }} · {{ substr($j->jamPelajaran->jam_mulai,0,5) }}–{{ substr($j->jamPelajaran->jam_selesai,0,5) }}</span>
                 @if($sudah)
                 <span class="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">Sudah diisi</span>
                 @endif

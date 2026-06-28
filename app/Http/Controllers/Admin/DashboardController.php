@@ -23,14 +23,18 @@ class DashboardController extends Controller
         $tahunAktif  = TahunAjaran::aktif();
 
         $hariIni = now()->dayOfWeekIso;
-        $jadwalHariIni = Jadwal::with(['guru', 'kelas', 'mapel'])
-            ->where('hari', $hariIni)
+        $jadwalHariIni = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['guru', 'kelas', 'mapel', 'jamPelajaran'])
+            ->where('jam_pelajaran.hari', $hariIni)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get();
 
-        $guruBelumIsi = Jadwal::with(['guru', 'kelas', 'mapel'])
-            ->where('hari', $hariIni)
+        $guruBelumIsi = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['guru', 'kelas', 'mapel', 'jamPelajaran'])
+            ->where('jam_pelajaran.hari', $hariIni)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->whereDoesntHave('jurnal', fn($q) => $q->whereDate('tanggal', today()))
             ->get()

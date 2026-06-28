@@ -15,16 +15,6 @@ class MapelImport implements ToCollection, WithHeadingRow
 
     public function collection(Collection $rows): void
     {
-        $seenKode = [];
-
-        $existingKode = DB::table('mapel')
-            ->whereNull('deleted_at')
-            ->whereNotNull('kode')
-            ->pluck('kode')
-            ->map(fn($k) => strtolower((string) $k))
-            ->flip()
-            ->toArray();
-
         $validData = [];
 
         foreach ($rows as $index => $row) {
@@ -58,19 +48,7 @@ class MapelImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            $kodeKey = strtolower($kodeMapel);
 
-            if (isset($seenKode[$kodeKey])) {
-                $this->errors[] = ['row' => $rowNumber, 'message' => "Kode mapel \"{$kodeMapel}\" duplikat dalam file (baris {$seenKode[$kodeKey]})."];
-                continue;
-            }
-            if (isset($existingKode[$kodeKey])) {
-                $this->errors[] = ['row' => $rowNumber, 'message' => "Kode mapel \"{$kodeMapel}\" sudah ada di database."];
-                continue;
-            }
-
-            $seenKode[$kodeKey] = $rowNumber;
-            
             $validData[] = ['nama' => $namaMapel, 'kode' => $kodeMapel];
         }
 

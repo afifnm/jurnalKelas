@@ -312,7 +312,7 @@
             @foreach($hari['entries'] as $entry)
             @php $j = $entry['jadwal']; $jr = $entry['jurnal']; @endphp
             <tr class="{{ $jr ? '' : 'row-missing' }}">
-              <td class="td-jam">{{ substr($j->jam_mulai,0,5) }}&ndash;{{ substr($j->jam_selesai,0,5) }}</td>
+              <td class="td-jam">{{ substr($j->jamPelajaran->jam_mulai,0,5) }}&ndash;{{ substr($j->jamPelajaran->jam_selesai,0,5) }}</td>
               <td class="td-mapel">{{ $j->mapel->nama }}</td>
               <td class="td-kelas">Kelas {{ $j->kelas->nama }}</td>
               @if($jr)

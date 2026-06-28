@@ -14,14 +14,8 @@ class Jadwal extends Model
     protected $table = 'jadwal';
 
     protected $fillable = [
-        'guru_id', 'kelas_id', 'mapel_id', 'tahun_ajaran_id',
-        'hari', 'jam_mulai', 'jam_selesai',
+        'guru_id', 'kelas_id', 'mapel_id', 'tahun_ajaran_id', 'jam_pelajaran_id'
     ];
-
-    protected function casts(): array
-    {
-        return ['hari' => 'integer'];
-    }
 
     public function guru(): BelongsTo
     {
@@ -43,9 +37,35 @@ class Jadwal extends Model
         return $this->belongsTo(TahunAjaran::class)->withTrashed();
     }
 
+    public function jamPelajaran(): BelongsTo
+    {
+        return $this->belongsTo(JamPelajaran::class);
+    }
+
     public function jurnal(): HasMany
     {
         return $this->hasMany(Jurnal::class);
+    }
+
+    // Accessors for backward compatibility and ease of access
+    public function getHariAttribute()
+    {
+        return $this->jamPelajaran->hari ?? null;
+    }
+
+    public function getJamMulaiAttribute()
+    {
+        return $this->jamPelajaran->jam_mulai ?? null;
+    }
+
+    public function getJamSelesaiAttribute()
+    {
+        return $this->jamPelajaran->jam_selesai ?? null;
+    }
+
+    public function getJamKeAttribute()
+    {
+        return $this->jamPelajaran->jam_ke ?? null;
     }
 
     public function getNamaHariAttribute(): string

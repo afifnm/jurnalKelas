@@ -120,12 +120,12 @@
                         @endif
                     </div>
                     <div class="pb-2 space-y-1.5 px-5">
-                        @foreach($jadwalHari->sortBy('jam_mulai') as $j)
+                        @foreach($jadwalHari->sortBy(fn($j) => $j->jamPelajaran->jam_ke) as $j)
                         <div class="flex items-center gap-3 p-3 rounded-xl
                             @if($hariNum == $hariIni) bg-white dark:bg-zinc-800/60 border border-amber-100 dark:border-amber-900/30 @else bg-slate-50 dark:bg-zinc-800/40 @endif">
                             <div class="text-center w-20 flex-shrink-0">
-                                <p class="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono">{{ substr($j->jam_mulai, 0, 5) }}</p>
-                                <p class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">{{ substr($j->jam_selesai, 0, 5) }}</p>
+                                <p class="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono">{{ substr($j->jamPelajaran->jam_mulai, 0, 5) }}</p>
+                                <p class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">{{ substr($j->jamPelajaran->jam_selesai, 0, 5) }}</p>
                             </div>
                             <div class="w-px h-8 bg-slate-200 dark:bg-zinc-700 flex-shrink-0"></div>
                             <div class="flex-1 min-w-0">

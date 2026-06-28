@@ -17,7 +17,9 @@ class JadwalController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Jadwal::with(['guru', 'kelas', 'mapel', 'tahunAjaran']);
+        $query = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['guru', 'kelas', 'mapel', 'tahunAjaran', 'jamPelajaran']);
 
         if ($guru = $request->guru_id) {
             $query->where('guru_id', $guru);
@@ -26,7 +28,7 @@ class JadwalController extends Controller
             $query->where('tahun_ajaran_id', $ta);
         }
 
-        $jadwal       = $query->orderBy('hari')->orderBy('jam_mulai')->paginate(20)->withQueryString();
+        $jadwal       = $query->orderBy('jam_pelajaran.hari')->orderBy('jam_pelajaran.jam_ke')->paginate(20)->withQueryString();
         $guru         = User::role('guru')->orderBy('nama')->get();
         $kelas        = Kelas::orderBy('nama')->get();
         $mapel        = Mapel::orderBy('nama')->get();
@@ -56,7 +58,7 @@ class JadwalController extends Controller
         }
 
         $jadwal  = Jadwal::create($data);
-        $jadwal->load(['guru', 'kelas', 'mapel']);
+        $jadwal->load(['guru', 'kelas', 'mapel', 'jamPelajaran']);
 
         return response()->json([
             'message'  => 'Jadwal berhasil ditambahkan.',
@@ -87,7 +89,7 @@ class JadwalController extends Controller
 
         return response()->json([
             'message'  => 'Jadwal berhasil diperbarui.',
-            'jadwal'   => $jadwal->fresh()->load(['guru', 'kelas', 'mapel']),
+            'jadwal'   => $jadwal->fresh()->load(['guru', 'kelas', 'mapel', 'jamPelajaran']),
         ]);
     }
 
@@ -101,27 +103,23 @@ class JadwalController extends Controller
     {
         $warnings = [];
 
-        $baseQuery = fn(string $col, int $val) => Jadwal::with(['guru', 'kelas', 'mapel'])
+        $baseQuery = fn(string $col, int $val) => Jadwal::with(['guru', 'kelas', 'mapel', 'jamPelajaran'])
             ->where($col, $val)
             ->where('tahun_ajaran_id', $data['tahun_ajaran_id'])
-            ->where('hari', $data['hari'])
+            ->where('jam_pelajaran_id', $data['jam_pelajaran_id'])
             ->when(!empty($excludeIds), function($q) use ($excludeIds) {
                 $q->whereNotIn('id', $excludeIds);
             })
-            ->where('jam_mulai', '<', $data['jam_selesai'])
-            ->where('jam_selesai', '>', $data['jam_mulai'])
             ->get();
 
         foreach ($baseQuery('guru_id', $data['guru_id']) as $konflik) {
-            $mulai   = substr($konflik->jam_mulai, 0, 5);
-            $selesai = substr($konflik->jam_selesai, 0, 5);
-            $warnings[] = "Konflik guru: {$konflik->guru->nama} sudah mengajar {$konflik->mapel->nama} di Kelas {$konflik->kelas->nama} pada {$mulai}–{$selesai}.";
+            $jam = "Jam ke-{$konflik->jamPelajaran->jam_ke} ({$konflik->nama_hari})";
+            $warnings[] = "Konflik guru: {$konflik->guru->nama} sudah mengajar {$konflik->mapel->nama} di Kelas {$konflik->kelas->nama} pada {$jam}.";
         }
 
         foreach ($baseQuery('kelas_id', $data['kelas_id']) as $konflik) {
-            $mulai   = substr($konflik->jam_mulai, 0, 5);
-            $selesai = substr($konflik->jam_selesai, 0, 5);
-            $warnings[] = "Konflik kelas: Kelas ini sudah ada jadwal {$konflik->mapel->nama} ({$konflik->guru->nama}) pada {$mulai}–{$selesai}.";
+            $jam = "Jam ke-{$konflik->jamPelajaran->jam_ke} ({$konflik->nama_hari})";
+            $warnings[] = "Konflik kelas: Kelas ini sudah ada jadwal {$konflik->mapel->nama} ({$konflik->guru->nama}) pada {$jam}.";
         }
 
         return $warnings;

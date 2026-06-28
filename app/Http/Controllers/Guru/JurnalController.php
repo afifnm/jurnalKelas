@@ -25,11 +25,13 @@ class JurnalController extends Controller
         $hariIni = now()->dayOfWeekIso;
         $tahunAktif = TahunAjaran::aktif();
 
-        $jadwalHariIni = Jadwal::with(['kelas', 'mapel'])
+        $jadwalHariIni = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['kelas', 'mapel', 'jamPelajaran'])
             ->where('guru_id', $guru->id)
-            ->where('hari', $hariIni)
+            ->where('jam_pelajaran.hari', $hariIni)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get();
 
         $jurnalHariIni = Jurnal::where('guru_id', $guru->id)
@@ -54,15 +56,15 @@ class JurnalController extends Controller
             foreach ($jadwalHariIni as $j) {
                 if (in_array($j->id, $sudahDiisiHariIni)) continue;
 
-                $jamMulai   = \Carbon\Carbon::createFromTimeString($j->jam_mulai);
-                $jamSelesai = \Carbon\Carbon::createFromTimeString($j->jam_selesai);
+                $jamMulai   = \Carbon\Carbon::createFromTimeString($j->jamPelajaran->jam_mulai);
+                $jamSelesai = \Carbon\Carbon::createFromTimeString($j->jamPelajaran->jam_selesai);
 
                 $windowMulai = $jamMulai->copy()->subMinutes(15)->format('H:i:s');
                 $windowAkhir = $jamSelesai->copy()->addMinutes(30)->format('H:i:s');
 
                 if ($currentTime >= $windowMulai && $currentTime <= $windowAkhir) {
                     $autoFilledJadwal = $j;
-                    $autoJamMasuk  = $currentTime >= $j->jam_mulai
+                    $autoJamMasuk  = $currentTime >= $j->jamPelajaran->jam_mulai
                         ? $now->format('H:i')
                         : $jamMulai->format('H:i');
                     $autoJamKeluar = $jamSelesai->format('H:i');
@@ -131,11 +133,13 @@ class JurnalController extends Controller
 
         $hariIni = now()->dayOfWeekIso;
         $tahunAktif = TahunAjaran::aktif();
-        $jadwalHariIni = Jadwal::with(['kelas', 'mapel'])
+        $jadwalHariIni = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['kelas', 'mapel', 'jamPelajaran'])
             ->where('guru_id', $guru->id)
-            ->where('hari', $hariIni)
+            ->where('jam_pelajaran.hari', $hariIni)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
-            ->orderBy('jam_mulai')
+            ->orderBy('jam_pelajaran.jam_ke')
             ->get();
 
         $sudahDiisiHariIni = Jurnal::where('guru_id', $guru->id)
@@ -172,7 +176,7 @@ class JurnalController extends Controller
             $menitTerlambat = 0;
 
             if ($jadwal && $request->filled('jam_masuk_aktual')) {
-                $jamMulai = strtotime($jadwal->jam_mulai);
+                $jamMulai = strtotime($jadwal->jamPelajaran->jam_mulai);
                 $jamMasuk = strtotime($request->jam_masuk_aktual);
                 $selisih  = ($jamMasuk - $jamMulai) / 60;
                 if ($selisih > 0) {
@@ -225,7 +229,7 @@ class JurnalController extends Controller
         $menitTerlambat = 0;
 
         if ($jadwal && $request->filled('jam_masuk_aktual')) {
-            $jamMulai = strtotime($jadwal->jam_mulai);
+            $jamMulai = strtotime($jadwal->jamPelajaran->jam_mulai);
             $jamMasuk = strtotime($request->jam_masuk_aktual);
             $selisih  = ($jamMasuk - $jamMulai) / 60;
             if ($selisih > 0) {

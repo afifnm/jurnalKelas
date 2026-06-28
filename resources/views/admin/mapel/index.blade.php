@@ -322,7 +322,17 @@ function mapelManager() {
             finally { this.pengajarLoading = false; this.$nextTick(() => lucide.createIcons()); }
         },
         openCreate() { this.mode = 'create'; this.form = { nama: '', kode: '' }; this.errors = {}; this.errorMsg = ''; this.modal = true; this.$nextTick(() => lucide.createIcons()); },
-        openEdit(item) { this.mode = 'edit'; this.editId = item.id; this.form = { nama: item.nama, kode: item.kode || '' }; this.errors = {}; this.errorMsg = ''; this.modal = true; this.$nextTick(() => lucide.createIcons()); },
+        openEdit(item) {
+            this.mode = 'edit'; this.editId = item.id;
+            this.form = { nama: item.nama, kode: item.kode || '' };
+            this.errors = {}; this.errorMsg = ''; this.modal = true;
+            this.$nextTick(() => {
+                lucide.createIcons();
+                this.$root.querySelectorAll('select').forEach(el => {
+                    if (el.tomselect) el.tomselect.setValue(el.value);
+                });
+            });
+        },
         async submitForm() {
             this.loading = true; this.errors = {}; this.errorMsg = '';
             const url = this.mode === 'create' ? '{{ route('admin.mapel.store') }}' : `/admin/mapel/${this.editId}`;

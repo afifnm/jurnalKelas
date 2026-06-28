@@ -14,13 +14,11 @@ return new class extends Migration
             $table->foreignId('kelas_id')->constrained('kelas')->cascadeOnDelete();
             $table->foreignId('mapel_id')->constrained('mapel')->cascadeOnDelete();
             $table->foreignId('tahun_ajaran_id')->constrained('tahun_ajaran')->cascadeOnDelete();
-            $table->tinyInteger('hari'); // 1=Senin, 2=Selasa, ..., 7=Minggu
-            $table->time('jam_mulai');
-            $table->time('jam_selesai');
+            $table->foreignId('jam_pelajaran_id')->constrained('jam_pelajaran')->cascadeOnDelete();
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['guru_id', 'hari']);
+            $table->index(['guru_id']);
         });
     }
 

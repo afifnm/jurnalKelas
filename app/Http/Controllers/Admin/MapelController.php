@@ -22,7 +22,7 @@ class MapelController extends Controller
     {
         $request->validate([
             'nama' => ['required', 'string', 'max:100'],
-            'kode' => ['nullable', 'string', 'max:20', 'unique:mapel,kode'],
+            'kode' => ['nullable', 'string', 'max:20'],
         ]);
         $mapel = Mapel::create($request->only(['nama', 'kode']));
         return response()->json(['message' => 'Mapel berhasil ditambahkan.', 'mapel' => $mapel]);
@@ -32,7 +32,7 @@ class MapelController extends Controller
     {
         $request->validate([
             'nama' => ['required', 'string', 'max:100'],
-            'kode' => ['nullable', 'string', 'max:20', "unique:mapel,kode,{$mapel->id}"],
+            'kode' => ['nullable', 'string', 'max:20'],
         ]);
         $mapel->update($request->only(['nama', 'kode']));
         return response()->json(['message' => 'Mapel berhasil diperbarui.', 'mapel' => $mapel]);

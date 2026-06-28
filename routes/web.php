@@ -76,6 +76,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         ->name('tahun-ajaran.aktivasi');
     Route::post('tahun-ajaran/{tahunAjaran}/clone-jadwal', [Admin\TahunAjaranController::class, 'cloneJadwal'])
         ->name('tahun-ajaran.clone-jadwal');
+    Route::post('tahun-ajaran/{tahunAjaran}/generate-jadwal', [Admin\TahunAjaranController::class, 'generateJadwal'])
+        ->name('tahun-ajaran.generate-jadwal');
+
+    // Pembagian Tugas Mengajar
+    Route::get('/tugas-mengajar/print', [Admin\TugasMengajarController::class, 'print'])->name('tugas-mengajar.print');
+    Route::get('/tugas-mengajar', [Admin\TugasMengajarController::class, 'index'])->name('tugas-mengajar.index');
+    Route::post('/tugas-mengajar/cell', [Admin\TugasMengajarController::class, 'updateCell'])->name('tugas-mengajar.update-cell');
+    Route::post('/tugas-mengajar/jabatan', [Admin\TugasMengajarController::class, 'updateJabatan'])->name('tugas-mengajar.update-jabatan');
+    Route::post('/tugas-mengajar/destroy-row', [Admin\TugasMengajarController::class, 'destroyRow'])->name('tugas-mengajar.destroy-row');
+    Route::post('/tugas-mengajar/bulk-update', [Admin\TugasMengajarController::class, 'bulkUpdate'])->name('tugas-mengajar.bulk-update');
 
     Route::get('/sekolah',   [Admin\SekolahController::class, 'index'])->name('sekolah.index');
     Route::put('/sekolah',   [Admin\SekolahController::class, 'update'])->name('sekolah.update');

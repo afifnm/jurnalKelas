@@ -45,14 +45,23 @@
                         </span>
                     </td>
                     <td class="px-4 py-3.5">
-                        @if($ta->jadwal_count > 0)
-                            <span class="inline-flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-zinc-400">
-                                <i data-lucide="calendar-check" class="w-3.5 h-3.5 text-green-500"></i>
-                                {{ $ta->jadwal_count }} jadwal
-                            </span>
-                        @else
-                            <span class="text-xs text-slate-400 dark:text-zinc-600">Belum ada</span>
-                        @endif
+                        <div class="flex items-center gap-2">
+                            @if($ta->jadwal_count > 0)
+                                <span class="inline-flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-zinc-400">
+                                    <i data-lucide="calendar-check" class="w-3.5 h-3.5 text-green-500"></i>
+                                    {{ $ta->jadwal_count }} jadwal
+                                </span>
+                            @else
+                                <span class="text-xs text-slate-400 dark:text-zinc-600">Belum ada</span>
+                            @endif
+                            
+                            <button @click="generateJadwal({{ $ta->id }}, {{ $ta->jadwal_count }})" 
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-slate-100 hover:bg-indigo-100 text-slate-600 hover:text-indigo-700 dark:bg-zinc-800 dark:hover:bg-indigo-900/40 dark:text-zinc-300 dark:hover:text-indigo-400 transition-colors rounded-lg"
+                                title="Generate Jadwal Otomatis">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                Generate
+                            </button>
+                        </div>
                     </td>
                     <td class="px-4 py-3.5">
                         @if($ta->is_aktif)
@@ -208,7 +217,12 @@ function taManager() {
             this.mode = 'edit'; this.editId = item.id;
             this.form = { nama: item.nama, semester: item.semester, is_aktif: !!item.is_aktif };
             this.errorMsg = ''; this.modal = true;
-            this.$nextTick(() => lucide.createIcons());
+            this.$nextTick(() => {
+                lucide.createIcons();
+                this.$root.querySelectorAll('select').forEach(el => {
+                    if (el.tomselect) el.tomselect.setValue(el.value);
+                });
+            });
         },
 
         openClone() {
@@ -322,6 +336,87 @@ function taManager() {
                 }
             } catch { this.cloneError = 'Terjadi kesalahan. Coba lagi.'; }
             finally { this.cloneLoading = false; }
+        },
+
+        async generateJadwal(id, jadwalCount) {
+            let htmlText = `<p style="font-size:0.875rem; text-align: left; margin-bottom: 0.5rem">Jadwal akan disusun otomatis berdasarkan data Tugas Mengajar dan Jam Pelajaran.</p>`;
+            htmlText += `<div style="text-align: left;" class="mt-3">
+                            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Metode Penyusunan</label>
+                            <select id="generate-opsi" onchange="document.getElementById('generate-maxjam-wrap').style.display = this.value === 'max_4' ? 'block' : 'none'" class="w-full text-sm rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                                <option value="max_4">Opsi 1: Pisahkan maksimal N jam berturut-turut</option>
+                                <option value="all_at_once">Opsi 2: Langsung semua jam sekaligus</option>
+                            </select>
+                            <div id="generate-maxjam-wrap" class="mt-3">
+                                <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Maksimal jam berturut-turut</label>
+                                <input id="generate-maxjam" type="number" min="1" max="10" value="4" class="w-full text-sm rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                                <p class="text-xs text-slate-400 dark:text-zinc-500 mt-1">Jam mengajar dipecah agar tidak lebih dari nilai ini berturut-turut dalam satu hari (1–10).</p>
+                            </div>
+                         </div>`;
+
+            if (jadwalCount > 0) {
+                htmlText += `<div style="text-align: left;" class="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50">
+                                <p class="text-sm text-red-600 dark:text-red-400 font-semibold mb-1"><i data-lucide="alert-triangle" class="w-4 h-4 inline-block mr-1"></i>Peringatan!</p>
+                                <p class="text-xs text-red-500 dark:text-red-300">Sudah ada ${jadwalCount} jadwal di tahun ajaran ini. Proses generate akan <strong>menghapus/menggantikan</strong> seluruh jadwal yang sudah ada sebelumnya.</p>
+                             </div>`;
+            }
+
+            const { isConfirmed, value: result } = await Swal.fire({
+                title: 'Generate Jadwal Otomatis',
+                html: htmlText,
+                icon: jadwalCount > 0 ? 'warning' : 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Generate',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#6366f1',
+                didOpen: () => lucide.createIcons(),
+                preConfirm: () => {
+                    const opsi = document.getElementById('generate-opsi').value;
+                    const raw = parseInt(document.getElementById('generate-maxjam').value, 10);
+                    if (opsi === 'max_4' && (isNaN(raw) || raw < 1 || raw > 10)) {
+                        Swal.showValidationMessage('Maksimal jam harus antara 1 sampai 10');
+                        return false;
+                    }
+                    return { opsi, maxJam: isNaN(raw) ? 4 : raw };
+                }
+            });
+
+            if (!isConfirmed) return;
+            const { opsi, maxJam } = result;
+
+            Swal.fire({
+                title: 'Menyusun Jadwal...',
+                html: 'Mohon tunggu, proses ini mungkin memakan waktu beberapa detik.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const res = await fetch(`/admin/tahun-ajaran/${id}/generate-jadwal`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+                    body: JSON.stringify({ opsi, max_jam: maxJam })
+                });
+                const data = await res.json();
+                
+                if (!res.ok) {
+                    Swal.fire({ icon: 'error', title: 'Gagal', text: data.message });
+                } else {
+                    Swal.fire({ 
+                        icon: 'success', 
+                        title: 'Selesai!', 
+                        text: data.message,
+                        timer: 2000, 
+                        showConfirmButton: false, 
+                        toast: true, 
+                        position: 'top-end' 
+                    });
+                    setTimeout(() => location.reload(), 1800);
+                }
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Terjadi kesalahan sistem.' });
+            }
         }
     }
 }
