@@ -51,27 +51,89 @@
     @endif
 
     <!-- Filter -->
-    <form method="GET" class="flex items-center gap-2 mb-4">
-        <input type="month" name="bulan" value="{{ request('bulan') }}" style="width:auto" class="input-field py-1.5 text-sm shrink-0">
-        <select name="kelas_id" style="width:auto" class="input-field py-1.5 text-sm shrink-0">
+    <form method="GET" class="flex flex-wrap items-center gap-2 mb-4">
+        <input type="month" name="bulan" value="{{ request('bulan') }}" class="input-field py-1.5 text-sm flex-1 min-w-[140px]">
+        <select name="kelas_id" class="input-field py-1.5 text-sm flex-1 min-w-[120px]">
             <option value="">Semua Kelas</option>
             @foreach($kelas as $k)
                 <option value="{{ $k->id }}" @selected(request('kelas_id') == $k->id)>{{ $k->nama }}</option>
             @endforeach
         </select>
-        <button type="submit" class="btn-primary py-1.5 text-sm shrink-0">
-            <i data-lucide="search" class="w-3.5 h-3.5"></i> Cari
-        </button>
-        @if(request()->hasAny(['bulan','kelas_id']))
-        <a href="{{ route('guru.jurnal.index') }}" class="inline-flex items-center gap-1 py-1.5 px-3 text-sm rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0">
-            <i data-lucide="x" class="w-3.5 h-3.5"></i> Reset
-        </a>
-        @endif
+        <div class="flex items-center gap-2">
+            <button type="submit" class="btn-primary py-1.5 text-sm shrink-0">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i> Cari
+            </button>
+            @if(request()->hasAny(['bulan','kelas_id']))
+            <a href="{{ route('guru.jurnal.index') }}" class="inline-flex items-center gap-1 py-1.5 px-3 text-sm rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i> Reset
+            </a>
+            @endif
+        </div>
     </form>
 
     <!-- Tabel Jurnal -->
     <div class="card overflow-hidden">
-        <div class="overflow-x-auto">
+
+        {{-- Mobile: Card List --}}
+        <div class="divide-y divide-slate-100 dark:divide-zinc-700/50 md:hidden">
+            @forelse($jurnal as $j)
+            <div class="p-4">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-slate-700 dark:text-slate-200 text-sm">{{ $j->tanggal->translatedFormat('l, j F Y') }}</p>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                            <span class="font-medium">{{ $j->kelas->nama }}</span> · {{ $j->mapel->nama }}
+                        </p>
+                    </div>
+                    @if($j->is_terlambat)
+                    <span class="badge bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 flex-shrink-0">
+                        <i data-lucide="clock-alert" class="w-3 h-3"></i> +{{ $j->menit_terlambat }} mnt
+                    </span>
+                    @else
+                    <span class="badge badge-validated flex-shrink-0">
+                        <i data-lucide="clock-check" class="w-3 h-3"></i> Tepat waktu
+                    </span>
+                    @endif
+                </div>
+                <p class="text-xs text-slate-600 dark:text-zinc-400 line-clamp-2 mb-3">{{ $j->materi }}</p>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs text-slate-400 dark:text-zinc-500 font-mono">
+                        Masuk: {{ $j->jam_masuk_aktual ? substr($j->jam_masuk_aktual, 0, 5) : '-' }}
+                        @if($j->lampiran->count())
+                        · <i data-lucide="paperclip" class="w-3 h-3 inline-block -mt-0.5"></i> {{ $j->lampiran->count() }}
+                        @endif
+                    </span>
+                    <div class="flex items-center gap-1">
+                        <button @click="viewDetail({{ $j->id }})"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors">
+                            <i data-lucide="eye" class="w-3.5 h-3.5"></i> Detail
+                        </button>
+                        <a href="{{ route('guru.jurnal.edit', $j->id) }}"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-lg transition-colors">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Edit
+                        </a>
+                        <button @click="deleteJurnal({{ $j->id }})"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            @empty
+            <div class="px-4 py-12 text-center">
+                <div class="flex flex-col items-center text-slate-400 dark:text-zinc-600">
+                    <i data-lucide="notebook" class="w-10 h-10 mb-2 opacity-50"></i>
+                    <p class="text-sm">Belum ada jurnal</p>
+                    <a href="{{ route('guru.jurnal.create') }}" class="mt-3 btn-primary text-xs">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Isi Jurnal Pertama
+                    </a>
+                </div>
+            </div>
+            @endforelse
+        </div>
+
+        {{-- Desktop: Table --}}
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-slate-50 dark:bg-zinc-800/60 border-b border-slate-200 dark:border-zinc-700/50">
@@ -141,6 +203,7 @@
                 </tbody>
             </table>
         </div>
+
         @if($jurnal->hasPages())
         <div class="px-4 py-3 border-t border-slate-100 dark:border-zinc-700/50">{{ $jurnal->links() }}</div>
         @endif

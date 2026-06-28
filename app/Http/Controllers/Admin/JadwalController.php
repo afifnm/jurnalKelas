@@ -38,30 +38,56 @@ class JadwalController extends Controller
 
     public function store(StoreJadwalRequest $request): JsonResponse
     {
-        $data    = $request->validated();
-        $jadwal  = Jadwal::create($data);
-        $jadwal->load(['guru', 'kelas', 'mapel', 'tahunAjaran']);
+        $data = $request->validated();
+        $overwriteId = $request->input('overwrite_id', 0);
+        
+        $excludeIds = array_filter([$overwriteId]);
+        $warnings = $this->findConflicts($data, $excludeIds);
 
-        $warnings = $this->findConflicts($data, $jadwal->id);
+        if (count($warnings) > 0) {
+            return response()->json([
+                'message' => 'Jadwal bentrok',
+                'errors'  => ['conflict' => $warnings],
+            ], 422);
+        }
+
+        if ($overwriteId) {
+            Jadwal::where('id', $overwriteId)->delete();
+        }
+
+        $jadwal  = Jadwal::create($data);
+        $jadwal->load(['guru', 'kelas', 'mapel']);
 
         return response()->json([
             'message'  => 'Jadwal berhasil ditambahkan.',
             'jadwal'   => $jadwal,
-            'warnings' => $warnings,
         ]);
     }
 
     public function update(StoreJadwalRequest $request, Jadwal $jadwal): JsonResponse
     {
         $data = $request->validated();
-        $jadwal->update($data);
+        $overwriteId = $request->input('overwrite_id', 0);
 
-        $warnings = $this->findConflicts($data, $jadwal->id);
+        $excludeIds = array_filter([$jadwal->id, $overwriteId]);
+        $warnings = $this->findConflicts($data, $excludeIds);
+
+        if (count($warnings) > 0) {
+            return response()->json([
+                'message' => 'Jadwal bentrok',
+                'errors'  => ['conflict' => $warnings],
+            ], 422);
+        }
+
+        if ($overwriteId && $overwriteId != $jadwal->id) {
+            Jadwal::where('id', $overwriteId)->delete();
+        }
+
+        $jadwal->update($data);
 
         return response()->json([
             'message'  => 'Jadwal berhasil diperbarui.',
             'jadwal'   => $jadwal->fresh()->load(['guru', 'kelas', 'mapel']),
-            'warnings' => $warnings,
         ]);
     }
 
@@ -71,7 +97,7 @@ class JadwalController extends Controller
         return response()->json(['message' => 'Jadwal berhasil dihapus.']);
     }
 
-    private function findConflicts(array $data, int $excludeId): array
+    private function findConflicts(array $data, array $excludeIds): array
     {
         $warnings = [];
 
@@ -79,7 +105,9 @@ class JadwalController extends Controller
             ->where($col, $val)
             ->where('tahun_ajaran_id', $data['tahun_ajaran_id'])
             ->where('hari', $data['hari'])
-            ->where('id', '!=', $excludeId)
+            ->when(!empty($excludeIds), function($q) use ($excludeIds) {
+                $q->whereNotIn('id', $excludeIds);
+            })
             ->where('jam_mulai', '<', $data['jam_selesai'])
             ->where('jam_selesai', '>', $data['jam_mulai'])
             ->get();

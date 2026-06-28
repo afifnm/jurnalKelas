@@ -16,35 +16,96 @@
     </div>
 
     <!-- Filter -->
-    <form method="GET" class="flex items-center gap-2 mb-4">
-        <select name="guru_id" style="width:auto" class="input-field py-1.5 text-sm shrink-0">
-            <option value="">Semua Guru</option>
-            @foreach($guru as $g)
-                <option value="{{ $g->id }}" @selected(request('guru_id') == $g->id)>{{ $g->nama }}</option>
-            @endforeach
-        </select>
-        <select name="kelas_id" style="width:auto" class="input-field py-1.5 text-sm shrink-0">
-            <option value="">Semua Kelas</option>
-            @foreach($kelas as $k)
-                <option value="{{ $k->id }}" @selected(request('kelas_id') == $k->id)>{{ $k->nama }}</option>
-            @endforeach
-        </select>
-        <input type="date" name="tanggal_dari" value="{{ request('tanggal_dari') }}" style="width:auto" class="input-field py-1.5 text-sm shrink-0">
-        <span class="text-slate-400 dark:text-zinc-600 text-xs shrink-0">–</span>
-        <input type="date" name="tanggal_sampai" value="{{ request('tanggal_sampai') }}" style="width:auto" class="input-field py-1.5 text-sm shrink-0">
-        <button type="submit" class="btn-primary py-1.5 text-sm shrink-0">
-            <i data-lucide="search" class="w-3.5 h-3.5"></i> Cari
-        </button>
-        @if(request()->hasAny(['guru_id','kelas_id','tanggal_dari','tanggal_sampai']))
-        <a href="{{ route('ks.jurnal.index') }}" class="inline-flex items-center gap-1 py-1.5 px-3 text-sm rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0">
-            <i data-lucide="x" class="w-3.5 h-3.5"></i> Reset
-        </a>
-        @endif
+    <form method="GET" class="card p-4 mb-4 space-y-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <select name="guru_id" class="input-field py-1.5 text-sm flex-1 min-w-[140px]">
+                <option value="">Semua Guru</option>
+                @foreach($guru as $g)
+                    <option value="{{ $g->id }}" @selected(request('guru_id') == $g->id)>{{ $g->nama }}</option>
+                @endforeach
+            </select>
+            <select name="kelas_id" class="input-field py-1.5 text-sm flex-1 min-w-[120px]">
+                <option value="">Semua Kelas</option>
+                @foreach($kelas as $k)
+                    <option value="{{ $k->id }}" @selected(request('kelas_id') == $k->id)>{{ $k->nama }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <input type="date" name="tanggal_dari" value="{{ request('tanggal_dari') }}" class="input-field py-1.5 text-sm flex-1 min-w-[130px]">
+            <span class="text-slate-400 dark:text-zinc-600 text-xs shrink-0">–</span>
+            <input type="date" name="tanggal_sampai" value="{{ request('tanggal_sampai') }}" class="input-field py-1.5 text-sm flex-1 min-w-[130px]">
+            <div class="flex items-center gap-2">
+                <button type="submit" class="btn-primary py-1.5 text-sm shrink-0">
+                    <i data-lucide="search" class="w-3.5 h-3.5"></i> Cari
+                </button>
+                @if(request()->hasAny(['guru_id','kelas_id','tanggal_dari','tanggal_sampai']))
+                <a href="{{ route('ks.jurnal.index') }}" class="inline-flex items-center gap-1 py-1.5 px-3 text-sm rounded-lg border border-slate-200 dark:border-zinc-700 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i> Reset
+                </a>
+                @endif
+            </div>
+        </div>
     </form>
 
     <!-- Tabel -->
     <div class="card overflow-hidden">
-        <div class="overflow-x-auto">
+
+        {{-- Mobile: Card List --}}
+        <div class="divide-y divide-slate-100 dark:divide-zinc-700/50 md:hidden">
+            @forelse($jurnal as $j)
+            <div class="p-4">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 text-xs font-bold flex-shrink-0">
+                            {{ strtoupper(substr($j->guru->nama, 0, 1)) }}
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate">{{ $j->guru->nama }}</p>
+                            <p class="text-xs text-slate-400">{{ $j->kelas->nama }} · {{ $j->mapel->nama }}</p>
+                        </div>
+                    </div>
+                    @if($j->is_terlambat)
+                    <span class="badge bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 flex-shrink-0">
+                        <i data-lucide="clock-alert" class="w-3 h-3"></i> +{{ $j->menit_terlambat }} mnt
+                    </span>
+                    @else
+                    <span class="badge badge-validated flex-shrink-0">
+                        <i data-lucide="clock-check" class="w-3 h-3"></i> Tepat
+                    </span>
+                    @endif
+                </div>
+                <p class="text-xs text-slate-500 dark:text-zinc-400 mb-1.5">
+                    {{ $j->tanggal->translatedFormat('l, j F Y') }}
+                    @if($j->jam_masuk_aktual) · <span class="font-mono">{{ substr($j->jam_masuk_aktual, 0, 5) }}</span>@endif
+                </p>
+                <p class="text-xs text-slate-600 dark:text-zinc-400 line-clamp-2 mb-3">{{ $j->materi }}</p>
+                <div class="flex items-center justify-between">
+                    @if($j->lampiran->count())
+                    <span class="text-[10px] text-slate-400 flex items-center gap-1">
+                        <i data-lucide="paperclip" class="w-3 h-3"></i>{{ $j->lampiran->count() }} lampiran
+                    </span>
+                    @else
+                    <span></span>
+                    @endif
+                    <button @click="viewDetail({{ $j->id }})"
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors">
+                        <i data-lucide="eye" class="w-3.5 h-3.5"></i> Detail
+                    </button>
+                </div>
+            </div>
+            @empty
+            <div class="px-4 py-12 text-center">
+                <div class="flex flex-col items-center text-slate-400 dark:text-zinc-600">
+                    <i data-lucide="inbox" class="w-10 h-10 mb-2 opacity-50"></i>
+                    <p class="text-sm">Belum ada jurnal</p>
+                </div>
+            </div>
+            @endforelse
+        </div>
+
+        {{-- Desktop: Table --}}
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-slate-50 dark:bg-zinc-800/60 border-b border-slate-200 dark:border-zinc-700/50">
@@ -116,6 +177,7 @@
                 </tbody>
             </table>
         </div>
+
         @if($jurnal->hasPages())
         <div class="px-4 py-3 border-t border-slate-100 dark:border-zinc-700/50">{{ $jurnal->links() }}</div>
         @endif

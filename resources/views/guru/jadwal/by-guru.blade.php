@@ -55,10 +55,40 @@
 </div>
 @else
 
+{{-- Mobile: Guru Selector (horizontal scroll) --}}
+<div class="md:hidden mb-4">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-2">Pilih Guru</p>
+    <div class="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
+        @foreach($guruList as $guru)
+        @php
+            $jumlahJadwal    = collect($jadwalPerGuru[$guru->id]['jadwal'] ?? [])->flatten()->count();
+            $mengajarHariIni = isset($jadwalPerGuru[$guru->id]) && $jadwalPerGuru[$guru->id]['jadwal']->has($hariIni);
+            $isActive        = $guruId == $guru->id;
+        @endphp
+        <a href="{{ route('guru.jadwal.index', array_filter(['guru_id' => $guru->id, 'tahun_ajaran_id' => $tahunId])) }}"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all
+               {{ $isActive
+                   ? 'bg-amber-400 text-zinc-900 shadow-sm'
+                   : 'bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300' }}">
+            @if($mengajarHariIni && !$isActive)
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+            @endif
+            {{ $guru->nama }}
+            @if($jumlahJadwal > 0)
+            <span class="px-1 py-0.5 rounded-full text-[10px] font-semibold
+                {{ $isActive ? 'bg-zinc-900/20 text-zinc-800' : 'bg-slate-100 dark:bg-zinc-700/60 text-slate-400' }}">
+                {{ $jumlahJadwal }}
+            </span>
+            @endif
+        </a>
+        @endforeach
+    </div>
+</div>
+
 <div class="flex gap-5">
 
-    {{-- Sidebar guru --}}
-    <div class="w-max min-w-[10rem] max-w-[14rem] flex-shrink-0">
+    {{-- Sidebar guru (desktop) --}}
+    <div class="hidden md:block w-max min-w-[10rem] max-w-[14rem] flex-shrink-0">
         <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500 px-1 mb-2">Daftar Guru</p>
         <div class="space-y-0.5">
         @foreach($guruList as $guru)

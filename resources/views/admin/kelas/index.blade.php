@@ -8,23 +8,63 @@
 
 @section('content')
 <div x-data="kelasManager()" x-init="init()">
-    <div class="flex items-center justify-between mb-5">
+    <div class="flex items-start justify-between gap-3 mb-5">
         <div>
             <h2 class="text-lg font-bold text-slate-800 dark:text-white">Daftar Kelas</h2>
             <p class="text-sm text-slate-400 dark:text-zinc-500">Kelola data kelas yang tersedia</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-shrink-0">
             <button @click="openImport()" class="btn-secondary">
-                <i data-lucide="upload" class="w-4 h-4"></i> Import
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Import</span>
             </button>
             <button @click="openCreate()" class="btn-primary">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i> Tambah Kelas
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Tambah Kelas</span>
             </button>
         </div>
     </div>
 
     <div class="card overflow-hidden">
-        <div class="overflow-x-auto">
+
+        {{-- Mobile: Card List --}}
+        <div class="divide-y divide-slate-100 dark:divide-zinc-700/50 md:hidden">
+            @forelse($kelas as $item)
+            <div class="flex items-center gap-3 p-4">
+                <div class="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="school" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-slate-700 dark:text-slate-200 text-sm">{{ $item->nama }}</p>
+                    <span class="badge bg-slate-100 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300 mt-0.5">{{ $item->jadwal_count }} jadwal</span>
+                </div>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    <a href="{{ route('admin.jadwal.index', ['kelas_id' => $item->id]) }}"
+                        class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors">
+                        <i data-lucide="calendar-clock" class="w-3.5 h-3.5"></i>
+                    </a>
+                    <button @click="openEdit({{ $item->id }}, '{{ addslashes($item->nama) }}')"
+                        class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-lg transition-colors">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button @click="deleteKelas({{ $item->id }}, '{{ addslashes($item->nama) }}')"
+                        class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+            @empty
+            <div class="px-4 py-12 text-center text-slate-400 dark:text-zinc-600">
+                <div class="flex flex-col items-center">
+                    <i data-lucide="inbox" class="w-10 h-10 mb-2 opacity-50"></i>
+                    <p class="text-sm">Belum ada kelas</p>
+                </div>
+            </div>
+            @endforelse
+        </div>
+
+        {{-- Desktop: Table --}}
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-slate-50 dark:bg-zinc-800/60 border-b border-slate-200 dark:border-zinc-700/50">
@@ -79,6 +119,7 @@
                 </tbody>
             </table>
         </div>
+
         @if($kelas->hasPages())
         <div class="px-4 py-3 border-t border-slate-100 dark:border-zinc-700/50">{{ $kelas->links() }}</div>
         @endif

@@ -8,6 +8,8 @@ if ('serviceWorker' in navigator) {
 // ── NProgress (page loading bar) ─────────────────────────────────────────────
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
+import TomSelect from 'tom-select';
+import 'tom-select/dist/css/tom-select.css';
 NProgress.configure({ showSpinner: false, speed: 300, minimum: 0.1 });
 
 // ── Page Transition ───────────────────────────────────────────────────────────
@@ -63,6 +65,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Done when page fully loaded
     NProgress.done();
+
+    // Initialize Tom Select globally for all select elements
+    document.querySelectorAll('select').forEach(el => {
+        if (!el.classList.contains('no-search') && !el.tomselect) {
+            const ts = new TomSelect(el, {
+                create: false
+            });
+            
+            // Sync with Alpine x-model
+            ts.on('change', () => {
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        }
+    });
 });
 
 // Safety: also finish on popstate (browser back/forward)

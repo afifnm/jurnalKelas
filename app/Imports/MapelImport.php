@@ -25,12 +25,19 @@ class MapelImport implements ToCollection, WithHeadingRow
             ->flip()
             ->toArray();
 
+        $validData = [];
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             $namaMapel = trim((string) ($row['nama_mapel'] ?? ''));
             $kodeMapel = trim((string) ($row['kode_mapel'] ?? ''));
 
             if ($namaMapel === '' && $kodeMapel === '') {
+                continue;
+            }
+
+            // Abaikan baris panduan/instruksi dari template
+            if (str_starts_with(strtolower($namaMapel), 'nama mata pelajaran') || str_starts_with(strtolower($namaMapel), 'nama mapel') || str_starts_with($namaMapel, 'Nama ')) {
                 continue;
             }
 
@@ -63,10 +70,15 @@ class MapelImport implements ToCollection, WithHeadingRow
             }
 
             $seenKode[$kodeKey] = $rowNumber;
-            $existingKode[$kodeKey] = true;
+            
+            $validData[] = ['nama' => $namaMapel, 'kode' => $kodeMapel];
+        }
 
-            Mapel::create(['nama' => $namaMapel, 'kode' => $kodeMapel]);
-            $this->successCount++;
+        if (empty($this->errors)) {
+            foreach ($validData as $data) {
+                Mapel::create($data);
+                $this->successCount++;
+            }
         }
     }
 }

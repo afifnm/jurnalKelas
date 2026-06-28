@@ -25,22 +25,22 @@ class Jadwal extends Model
 
     public function guru(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'guru_id');
+        return $this->belongsTo(User::class, 'guru_id')->withTrashed();
     }
 
     public function kelas(): BelongsTo
     {
-        return $this->belongsTo(Kelas::class);
+        return $this->belongsTo(Kelas::class)->withTrashed();
     }
 
     public function mapel(): BelongsTo
     {
-        return $this->belongsTo(Mapel::class);
+        return $this->belongsTo(Mapel::class)->withTrashed();
     }
 
     public function tahunAjaran(): BelongsTo
     {
-        return $this->belongsTo(TahunAjaran::class);
+        return $this->belongsTo(TahunAjaran::class)->withTrashed();
     }
 
     public function jurnal(): HasMany

@@ -32,6 +32,8 @@ class UserImport implements ToCollection, WithHeadingRow
             ->flip()
             ->toArray();
 
+        $validData = [];
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
 
@@ -41,6 +43,11 @@ class UserImport implements ToCollection, WithHeadingRow
             $telp     = trim((string) ($row['telp'] ?? '')) ?: null;
 
             if ($nama === '' && $kodeGuru === '') {
+                continue;
+            }
+
+            // Abaikan baris panduan/instruksi dari template
+            if (str_starts_with($nama, 'Nama lengkap guru')) {
                 continue;
             }
 
@@ -62,6 +69,10 @@ class UserImport implements ToCollection, WithHeadingRow
             }
             if ($email !== null && strlen($email) > 255) {
                 $this->errors[] = ['row' => $rowNumber, 'message' => 'Email terlalu panjang.'];
+                continue;
+            }
+            if ($telp !== null && strlen($telp) > 20) {
+                $this->errors[] = ['row' => $rowNumber, 'message' => 'Nomor HP terlalu panjang (maks. 20 karakter).'];
                 continue;
             }
 
@@ -86,19 +97,24 @@ class UserImport implements ToCollection, WithHeadingRow
             }
 
             $seenKodes[$kodeKey] = $rowNumber;
-            $existingUsernames[$kodeKey] = true;
+            // $existingUsernames[$kodeKey] = true; // Not strictly needed to update existing list since we validate all at once
 
-            $user = User::create([
+            $validData[] = [
                 'nama'      => $nama,
                 'username'  => $kodeGuru,
                 'email'     => $email,
                 'password'  => '12345678',
                 'no_hp'     => $telp,
                 'is_active' => true,
-            ]);
+            ];
+        }
 
-            $user->assignRole('guru');
-            $this->successCount++;
+        if (empty($this->errors)) {
+            foreach ($validData as $data) {
+                $user = User::create($data);
+                $user->assignRole('guru');
+                $this->successCount++;
+            }
         }
     }
 }

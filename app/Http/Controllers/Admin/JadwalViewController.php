@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\JamPelajaran;
 use App\Models\Jadwal;
 use App\Models\Jurnal;
 use App\Models\Kelas;
@@ -44,14 +45,15 @@ class JadwalViewController extends Controller
             ];
         }
 
-        $guru      = User::role('guru')->where('is_active', true)->orderBy('nama')->get();
-        $mapel     = Mapel::orderBy('nama')->get();
-        $konflikIds = $this->getKonflikIds($tahunId);
+        $guru         = User::role('guru')->where('is_active', true)->orderBy('nama')->get();
+        $mapel        = Mapel::orderBy('nama')->get();
+        $konflikIds   = $this->getKonflikIds($tahunId);
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get();
 
         return view('admin.jadwal.by-kelas', compact(
             'tahunAjaran', 'tahunAktif', 'kelasList', 'namaHari',
             'jadwalPerKelas', 'tahunId', 'kelasId', 'hariIni',
-            'guru', 'mapel', 'konflikIds'
+            'guru', 'mapel', 'konflikIds', 'jamPelajaran'
         ));
     }
 
@@ -83,14 +85,49 @@ class JadwalViewController extends Controller
             ];
         }
 
-        $kelas      = Kelas::orderBy('nama')->get();
-        $mapel      = Mapel::orderBy('nama')->get();
-        $konflikIds = $this->getKonflikIds($tahunId);
+        $kelas        = Kelas::orderBy('nama')->get();
+        $mapel        = Mapel::orderBy('nama')->get();
+        $konflikIds   = $this->getKonflikIds($tahunId);
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get();
 
         return view('admin.jadwal.by-guru', compact(
             'tahunAjaran', 'tahunAktif', 'guruList', 'namaHari',
             'jadwalPerGuru', 'tahunId', 'hariIni', 'guruId',
-            'kelas', 'mapel', 'konflikIds'
+            'kelas', 'mapel', 'konflikIds', 'jamPelajaran'
+        ));
+    }
+
+    public function mapping(Request $request): View
+    {
+        $tahunAjaran = TahunAjaran::orderByDesc('is_aktif')->get();
+        $tahunAktif  = TahunAjaran::aktif();
+        $kelasList   = Kelas::orderBy('nama')->get();
+        $namaHari    = Jadwal::getNamaHariList();
+        
+        $tahunId = $request->tahun_ajaran_id ?? $tahunAktif?->id;
+        $kelasId = $request->kelas_id ?? $kelasList->first()?->id;
+
+        $jadwal = Jadwal::with(['guru', 'mapel'])
+            ->where('kelas_id', $kelasId)
+            ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
+            ->get();
+            
+        // Map jadwal by [hari]-[jam_mulai]-[jam_selesai] for easy lookup
+        $jadwalPerSlot = [];
+        foreach ($jadwal as $j) {
+            $key = $j->hari . '-' . substr($j->jam_mulai, 0, 5) . '-' . substr($j->jam_selesai, 0, 5);
+            $jadwalPerSlot[$key] = $j;
+        }
+
+        $guru         = User::role('guru')->where('is_active', true)->orderBy('nama')->get();
+        $mapel        = Mapel::orderBy('nama')->get();
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get()->groupBy('hari');
+        $kelasAktif   = $kelasList->firstWhere('id', $kelasId);
+
+        return view('admin.jadwal.mapping', compact(
+            'tahunAjaran', 'tahunAktif', 'kelasList', 'namaHari',
+            'tahunId', 'kelasId', 'kelasAktif', 'jadwalPerSlot',
+            'guru', 'mapel', 'jamPelajaran'
         ));
     }
 

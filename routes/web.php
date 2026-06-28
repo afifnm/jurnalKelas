@@ -53,8 +53,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('mapel/template', [ImportTemplateController::class, 'mapel'])->name('mapel.import.template');
     Route::get('mapel/{mapel}/pengajar', [Admin\MapelController::class, 'pengajar'])->name('mapel.pengajar');
     Route::resource('mapel', Admin\MapelController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('jam-pelajaran', [Admin\JamPelajaranController::class, 'index'])->name('jam-pelajaran.index');
+    Route::post('jam-pelajaran/clone', [Admin\JamPelajaranController::class, 'cloneHari'])->name('jam-pelajaran.clone');
+    Route::post('jam-pelajaran', [Admin\JamPelajaranController::class, 'store'])->name('jam-pelajaran.store');
+    Route::put('jam-pelajaran/{id}', [Admin\JamPelajaranController::class, 'update'])->name('jam-pelajaran.update');
+    Route::delete('jam-pelajaran/{id}', [Admin\JamPelajaranController::class, 'destroy'])->name('jam-pelajaran.destroy');
+
     Route::get('/jadwal',              [AdminJadwalViewController::class, 'byKelas'])->name('jadwal.index');
     Route::get('/jadwal/guru',         [AdminJadwalViewController::class, 'byGuru'])->name('jadwal.by-guru');
+    Route::get('/jadwal/mapping',      [AdminJadwalViewController::class, 'mapping'])->name('jadwal.mapping');
     Route::get('/jadwal/print/semua',  [AdminJadwalViewController::class, 'printSemua'])->name('jadwal.print.semua');
     Route::get('/jadwal/print/guru/{guru}',   [AdminJadwalViewController::class, 'printGuru'])->name('jadwal.print.guru');
     Route::get('/jadwal/print/kelas/{kelas}', [AdminJadwalViewController::class, 'printKelas'])->name('jadwal.print.kelas');

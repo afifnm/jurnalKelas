@@ -9,7 +9,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Jurnal Kelas') — {{ config('app.name') }}</title>
+    <title>@yield('title', 'Jurnal App') — {{ config('app.name') }}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,6 +42,7 @@
 <div class="flex min-h-screen" x-data="{ sidebarOpen: false }">
 
     <!-- Overlay mobile -->
+    @if(!View::hasSection('hide_sidebar'))
     <div x-show="sidebarOpen" @click="sidebarOpen = false"
          class="fixed inset-0 z-20 bg-black/40 lg:hidden" x-transition.opacity></div>
 
@@ -94,6 +95,7 @@
             </div>
         </div>
     </aside>
+    @endif
 
     <!-- Main Content -->
     <div class="flex-1 flex flex-col min-w-0">
@@ -102,9 +104,11 @@
         <header class="flex items-center gap-4 px-4 lg:px-6 py-3.5 bg-white dark:bg-zinc-900 border-b border-slate-200/80 dark:border-zinc-700/50 sticky top-0 z-10 backdrop-blur-sm bg-white/95 dark:bg-zinc-900/95">
 
             <!-- Mobile menu button -->
+            @if(!View::hasSection('hide_sidebar'))
             <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200">
                 <i data-lucide="menu" class="w-5 h-5"></i>
             </button>
+            @endif
 
             <!-- Breadcrumb -->
             <div class="flex-1 min-w-0">
@@ -121,7 +125,7 @@
                 <a href="{{ route('panduan') }}" title="Panduan Penggunaan Sistem"
                     class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors text-xs font-medium">
                     <i data-lucide="circle-help" class="w-3.5 h-3.5"></i>
-                    <span>Panduan Penggunaan</span>
+                    <span class="hidden sm:inline">Panduan Penggunaan</span>
                 </a>
 
                 <!-- Tahun ajaran badge -->

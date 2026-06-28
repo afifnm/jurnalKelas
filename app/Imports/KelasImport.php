@@ -24,11 +24,18 @@ class KelasImport implements ToCollection, WithHeadingRow
             ->flip()
             ->toArray();
 
+        $validData = [];
+
         foreach ($rows as $index => $row) {
             $rowNumber = $index + 2;
             $namaKelas = trim((string) ($row['nama_kelas'] ?? ''));
 
             if ($namaKelas === '') {
+                continue;
+            }
+
+            // Abaikan baris panduan/instruksi dari template
+            if (str_starts_with($namaKelas, 'Nama kelas, maks.')) {
                 continue;
             }
             if (strlen($namaKelas) > 50) {
@@ -48,10 +55,16 @@ class KelasImport implements ToCollection, WithHeadingRow
             }
 
             $seenNama[$namaKey] = $rowNumber;
-            $existingNama[$namaKey] = true;
+            // Kita tidak perlu mengupdate $existingNama karena kita mengecek file dan db sekaligus
+            
+            $validData[] = ['nama' => $namaKelas];
+        }
 
-            Kelas::create(['nama' => $namaKelas]);
-            $this->successCount++;
+        if (empty($this->errors)) {
+            foreach ($validData as $data) {
+                Kelas::create($data);
+                $this->successCount++;
+            }
         }
     }
 }

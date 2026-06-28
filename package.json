@@ -14,6 +14,7 @@
         "vite": "^8.0.0"
     },
     "dependencies": {
-        "nprogress": "^0.2.0"
+        "nprogress": "^0.2.0",
+        "tom-select": "^2.6.1"
     }
 }

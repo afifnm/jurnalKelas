@@ -16,9 +16,14 @@
         <h2 class="text-lg font-bold text-slate-800 dark:text-white">Jadwal per Guru</h2>
         <p class="text-sm text-slate-400 dark:text-zinc-500">Kelola jadwal mengajar tiap guru</p>
     </div>
-    <a href="{{ route('admin.jadwal.index') }}" class="btn-secondary text-sm">
-        <i data-lucide="layout-list" class="w-4 h-4"></i> Lihat per Kelas
-    </a>
+    <div class="flex items-center gap-2">
+        <a href="{{ route('admin.jadwal.mapping') }}" class="btn-secondary text-sm !bg-purple-50 !text-purple-600 !border-purple-200 hover:!bg-purple-100 dark:!bg-purple-900/30 dark:!border-purple-800 dark:hover:!bg-purple-900/50">
+            <i data-lucide="grip-horizontal" class="w-4 h-4"></i> Mapping (Drag & Drop)
+        </a>
+        <a href="{{ route('admin.jadwal.index') }}" class="btn-secondary text-sm">
+            <i data-lucide="layout-list" class="w-4 h-4"></i> Lihat per Kelas
+        </a>
+    </div>
 </div>
 
 {{-- Filter --}}
@@ -55,10 +60,40 @@
 </div>
 @else
 
+{{-- Mobile: Guru Selector (horizontal scroll) --}}
+<div class="md:hidden mb-4">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500 mb-2">Pilih Guru</p>
+    <div class="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
+        @foreach($guruList as $guru)
+        @php
+            $jumlahJadwal    = collect($jadwalPerGuru[$guru->id]['jadwal'] ?? [])->flatten()->count();
+            $mengajarHariIni = isset($jadwalPerGuru[$guru->id]) && $jadwalPerGuru[$guru->id]['jadwal']->has($hariIni);
+            $isActive        = $guruId == $guru->id;
+        @endphp
+        <a href="{{ route('admin.jadwal.by-guru', array_filter(['guru_id' => $guru->id, 'tahun_ajaran_id' => $tahunId])) }}"
+           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all
+               {{ $isActive
+                   ? 'bg-amber-400 text-zinc-900 shadow-sm'
+                   : 'bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300' }}">
+            @if($mengajarHariIni && !$isActive)
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+            @endif
+            {{ $guru->nama }}
+            @if($jumlahJadwal > 0)
+            <span class="px-1 py-0.5 rounded-full text-[10px] font-semibold
+                {{ $isActive ? 'bg-zinc-900/20 text-zinc-800' : 'bg-slate-100 dark:bg-zinc-700/60 text-slate-400' }}">
+                {{ $jumlahJadwal }}
+            </span>
+            @endif
+        </a>
+        @endforeach
+    </div>
+</div>
+
 <div class="flex gap-5">
 
-    {{-- Sidebar guru --}}
-    <div class="w-max min-w-[10rem] max-w-[14rem] flex-shrink-0">
+    {{-- Sidebar guru (desktop) --}}
+    <div class="hidden md:block w-max min-w-[10rem] max-w-[14rem] flex-shrink-0">
         <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-zinc-500 px-1 mb-2">Daftar Guru</p>
         <div class="space-y-0.5">
         @foreach($guruList as $guru)
@@ -129,31 +164,34 @@
 
         {{-- Tabel jadwal --}}
         <div class="card overflow-hidden">
-            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-zinc-700/50">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 text-sm font-bold">
+            <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-zinc-700/50">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 text-sm font-bold flex-shrink-0">
                         {{ strtoupper(substr($guruAktif?->nama ?? '?', 0, 1)) }}
                     </div>
-                    <div>
-                        <h3 class="font-bold text-slate-800 dark:text-white">{{ $guruAktif?->nama }}</h3>
+                    <div class="min-w-0">
+                        <h3 class="font-bold text-slate-800 dark:text-white truncate">{{ $guruAktif?->nama }}</h3>
                         <p class="text-xs text-slate-400 dark:text-zinc-500">Jadwal mingguan</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 flex-shrink-0">
                     @if($guruAktif)
                     <button @click="openLaporan({{ $guruAktif->id }})"
                             class="btn-secondary text-xs py-1.5 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/30">
-                        <i data-lucide="file-bar-chart-2" class="w-3.5 h-3.5"></i> Laporan Jurnal
+                        <i data-lucide="file-bar-chart-2" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Laporan Jurnal</span>
                     </button>
                     <a href="{{ route('admin.jadwal.print.guru', array_filter(['guru' => $guruId, 'tahun_ajaran_id' => $tahunId])) }}"
                        target="_blank"
                        class="btn-secondary text-xs py-1.5">
-                        <i data-lucide="printer" class="w-3.5 h-3.5"></i> Cetak Jadwal
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Cetak</span>
                     </a>
                     @if($tahunUntukForm)
                     <button @click="openCreate({{ $guruId }}, {{ $tahunUntukForm }})"
                             class="btn-primary text-xs py-1.5">
-                        <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i> Tambah Jadwal
+                        <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Tambah</span>
                     </button>
                     @endif
                     @endif
@@ -172,11 +210,11 @@
                 @endif
             </div>
             @else
-            <div class="divide-y divide-slate-100 dark:divide-zinc-700/50">
+            <div id="jadwal-list-container" class="divide-y divide-slate-100 dark:divide-zinc-700/50">
                 @foreach($namaHari as $hariNum => $hariNama)
                 @php $jadwalHari = $jadwalGrouped->get($hariNum, collect()); @endphp
                 @if($jadwalHari->isNotEmpty())
-                <div class="{{ $hariNum == $hariIni ? 'bg-amber-50/60 dark:bg-amber-950/10' : '' }}">
+                <div data-hari="{{ $hariNum }}" class="{{ $hariNum == $hariIni ? 'bg-amber-50/60 dark:bg-amber-950/10' : '' }}">
                     <div class="flex items-center gap-3 px-5 py-2.5">
                         <span class="text-xs font-bold uppercase tracking-wide w-14 flex-shrink-0
                             {{ $hariNum == $hariIni ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-zinc-500' }}">
@@ -191,7 +229,7 @@
                     <div class="pb-2 space-y-1.5 px-5">
                         @foreach($jadwalHari->sortBy('jam_mulai') as $j)
                         @php $isBentrok = in_array($j->id, $konflikIds); @endphp
-                        <div class="flex items-center gap-3 p-3 rounded-xl
+                        <div data-jadwal-id="{{ $j->id }}" class="flex items-center gap-3 p-3 rounded-xl
                             {{ $isBentrok
                                 ? 'bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40'
                                 : ($hariNum == $hariIni
@@ -217,11 +255,11 @@
                                 </p>
                             </div>
                             <div class="flex items-center gap-1 flex-shrink-0">
-                                <button @click="openEdit({{ $j->toJson() }})"
+                                <button onclick="_jadwalOpenEdit({{ $j->toJson() }})"
                                         class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-lg transition-colors">
                                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                 </button>
-                                <button @click="deleteJadwal({{ $j->id }}, '{{ addslashes($j->mapel->nama) }}')"
+                                <button onclick="_jadwalDelete({{ $j->id }}, '{{ addslashes($j->mapel?->nama ?? 'Tidak Ada') }}')"
                                         class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                 </button>
@@ -309,7 +347,9 @@
             <div class="flex items-center gap-2">
                 <i data-lucide="calendar-clock" class="w-4 h-4 text-amber-500"></i>
                 <h3 class="font-semibold text-slate-800 dark:text-white"
-                    x-text="mode === 'create' ? 'Tambah Jadwal' : 'Edit Jadwal'"></h3>
+                    x-text="mode === 'create' && successCount > 0
+                        ? `Tambah Jadwal (${successCount} ditambahkan)`
+                        : (mode === 'create' ? 'Tambah Jadwal' : 'Edit Jadwal')"></h3>
             </div>
             <button @click="modal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -340,11 +380,11 @@
                 </select>
                 <p x-show="errors.mapel_id" x-text="errors.mapel_id" class="text-xs text-red-500 mt-1"></p>
             </div>
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Hari</label>
-                    <select x-model="form.hari"
-                            class="w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500"
+                    <select x-model="form.hari" @change="onHariChange()"
+                            class="no-search w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500"
                             required>
                         <option value="">Hari</option>
                         @foreach($namaHari as $num => $nama)
@@ -354,18 +394,20 @@
                     <p x-show="errors.hari" x-text="errors.hari" class="text-xs text-red-500 mt-1"></p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Mulai</label>
-                    <input type="time" x-model="form.jam_mulai"
-                           class="w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500"
-                           required>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Jam Ke</label>
+                    <select x-model="form.jam_ke" @change="onJamKeChange()"
+                            class="no-search w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500"
+                            :disabled="!form.hari || jamSlots.length === 0" required>
+                        <option value="">Pilih Jam</option>
+                        <template x-for="slot in jamSlots" :key="slot.id">
+                            <option :value="String(slot.jam_ke)"
+                                    x-text="`Jam ke-${slot.jam_ke}  (${slot.jam_mulai.substring(0,5)}–${slot.jam_selesai.substring(0,5)})`">
+                            </option>
+                        </template>
+                    </select>
+                    <p x-show="!form.hari || jamSlots.length === 0" class="text-xs text-slate-400 mt-1"
+                       x-text="!form.hari ? 'Pilih hari terlebih dahulu' : 'Belum ada slot jam untuk hari ini'"></p>
                     <p x-show="errors.jam_mulai" x-text="errors.jam_mulai" class="text-xs text-red-500 mt-1"></p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Selesai</label>
-                    <input type="time" x-model="form.jam_selesai"
-                           class="w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500"
-                           required>
-                    <p x-show="errors.jam_selesai" x-text="errors.jam_selesai" class="text-xs text-red-500 mt-1"></p>
                 </div>
             </div>
             <div x-show="errorMsg" class="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 rounded-xl" style="display:none">
@@ -377,7 +419,8 @@
                 <p x-text="warningMsg" class="text-xs text-orange-700 dark:text-orange-400 leading-relaxed"></p>
             </div>
             <div class="flex gap-3 pt-1">
-                <button type="button" @click="modal = false" class="btn-secondary flex-1">Batal</button>
+                <button type="button" @click="closeModalAndReset()" class="btn-secondary flex-1"
+                        x-text="successCount > 0 && mode === 'create' ? 'Selesai' : 'Batal'"></button>
                 <button type="submit" :disabled="loading" class="btn-primary flex-1 flex items-center justify-center gap-1.5">
                     <span x-text="loading ? 'Menyimpan...' : (mode === 'create' ? 'Tambah' : 'Simpan')"></span>
                 </button>
@@ -393,17 +436,30 @@
 <script>
 function jadwalManager() {
     const defaultForm = {
-        guru_id: '', kelas_id: '', mapel_id: '', hari: '', jam_mulai: '', jam_selesai: '',
+        guru_id: '', kelas_id: '', mapel_id: '', hari: '', jam_mulai: '', jam_selesai: '', jam_ke: '',
         tahun_ajaran_id: ''
     };
+    const allJamSlots = @json($jamPelajaran ?? collect());
+    const kelasMap    = @json($kelas->keyBy('id')->map(fn($k) => ['nama' => $k->nama]));
+    const mapelMap    = @json($mapel->keyBy('id')->map(fn($m) => ['nama' => $m->nama]));
+    const namaHariMap = @json($namaHari);
+    const hariIni     = {{ $hariIni }};
+
     return {
         modal: false, mode: 'create', loading: false, errorMsg: '', warningMsg: '', errors: {},
         form: { ...defaultForm }, editId: null,
+        successCount: 0,
+        jamSlots: [],
 
         laporanModal: false,
         laporanGuruId: null,
         laporanDari: '',
         laporanSampai: '',
+
+        init() {
+            window._jadwalOpenEdit = (item) => this.openEdit(item);
+            window._jadwalDelete   = (id, nama) => this.deleteJadwal(id, nama);
+        },
 
         openLaporan(guruId) {
             this.laporanGuruId = guruId;
@@ -450,37 +506,76 @@ function jadwalManager() {
             this.laporanModal = false;
         },
 
+        onHariChange() {
+            const hariNum  = parseInt(this.form.hari);
+            this.jamSlots  = allJamSlots.filter(s => s.hari === hariNum);
+            this.form.jam_ke     = '';
+            this.form.jam_mulai  = '';
+            this.form.jam_selesai = '';
+        },
+
+        onJamKeChange() {
+            const slot = this.jamSlots.find(s => String(s.jam_ke) === String(this.form.jam_ke));
+            if (slot) {
+                this.form.jam_mulai   = (slot.jam_mulai   || '').substring(0, 5);
+                this.form.jam_selesai = (slot.jam_selesai || '').substring(0, 5);
+            }
+        },
+
         openCreate(guruId, tahunAjaranId) {
-            this.mode = 'create';
-            this.editId = null;
-            this.form = { ...defaultForm, guru_id: String(guruId), tahun_ajaran_id: String(tahunAjaranId) };
-            this.errors = {};
+            this.mode     = 'create';
+            this.editId   = null;
+            this.errors   = {};
             this.errorMsg = '';
             this.warningMsg = '';
+            const prevHari = this.form.hari;
+            this.form = {
+                ...defaultForm,
+                guru_id:         String(guruId),
+                tahun_ajaran_id: String(tahunAjaranId),
+                kelas_id:  this.successCount > 0 ? this.form.kelas_id  : '',
+                mapel_id:  this.successCount > 0 ? this.form.mapel_id  : '',
+                hari:      this.successCount > 0 ? prevHari : '',
+            };
+            if (this.form.hari) {
+                this.jamSlots = allJamSlots.filter(s => s.hari === parseInt(this.form.hari));
+            }
             this.modal = true;
         },
 
         openEdit(item) {
-            this.mode = 'edit';
+            this.mode   = 'edit';
             this.editId = item.id;
+            const hariNum = parseInt(item.hari);
+            this.jamSlots = allJamSlots.filter(s => s.hari === hariNum);
+            const slot = this.jamSlots.find(s =>
+                s.jam_mulai.substring(0, 5) === (item.jam_mulai || '').substring(0, 5)
+            );
             this.form = {
                 guru_id:         String(item.guru_id),
                 kelas_id:        String(item.kelas_id),
                 mapel_id:        String(item.mapel_id),
                 hari:            String(item.hari),
-                jam_mulai:       (item.jam_mulai || '').substring(0, 5),
+                jam_ke:          slot ? String(slot.jam_ke) : '',
+                jam_mulai:       (item.jam_mulai  || '').substring(0, 5),
                 jam_selesai:     (item.jam_selesai || '').substring(0, 5),
                 tahun_ajaran_id: String(item.tahun_ajaran_id),
             };
-            this.errors = {};
+            this.errors   = {};
             this.errorMsg = '';
             this.warningMsg = '';
             this.modal = true;
         },
 
+        closeModalAndReset() {
+            this.modal        = false;
+            this.successCount = 0;
+            this.warningMsg   = '';
+        },
+
         async submitForm() {
-            this.loading = true;
-            this.errors = {};
+            this.loading  = true;
+            this.errors   = {};
             this.errorMsg = '';
             this.warningMsg = '';
             const url    = this.mode === 'create' ? '{{ route('admin.jadwal.store') }}' : `/admin/jadwal/${this.editId}`;
@@ -497,27 +592,169 @@ function jadwalManager() {
                 });
                 const data = await res.json();
                 if (!res.ok) {
+                    if (data.errors && data.errors.conflict) {
+                        const msg = Array.isArray(data.errors.conflict) ? data.errors.conflict.join('\n') : data.errors.conflict[0];
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Bentrokan Jadwal',
+                            text: msg,
+                            confirmButtonText: 'Tutup',
+                            confirmButtonColor: '#ef4444'
+                        });
+                        return;
+                    }
                     if (data.errors) {
                         this.errors = Object.fromEntries(Object.entries(data.errors).map(([k, v]) => [k, v[0]]));
                     } else {
                         this.errorMsg = data.message || 'Terjadi kesalahan.';
                     }
-                } else {
-                    if (data.warnings && data.warnings.length > 0) {
-                        this.warningMsg = '⚠ Jadwal disimpan, namun terdeteksi bentrok: ' + data.warnings.join(' | ');
-                        Swal.fire({ icon: 'warning', title: 'Tersimpan dengan Peringatan', text: data.warnings[0], timer: 3000, showConfirmButton: false, toast: true, position: 'top-end' });
-                        setTimeout(() => location.reload(), 2800);
-                    } else {
-                        this.modal = false;
-                        Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
-                        setTimeout(() => location.reload(), 1200);
+                    return;
+                }
+
+                const jadwal = data.jadwal;
+                if (this.mode === 'create') {
+                    this.successCount++;
+                    this.insertJadwalCard(jadwal, data.warnings || []);
+
+                    const prevHari   = this.form.hari;
+                    const prevKelas  = this.form.kelas_id;
+                    const prevMapel  = this.form.mapel_id;
+                    const prevJamKe  = parseInt(this.form.jam_ke || '0');
+                    this.form = {
+                        ...defaultForm,
+                        guru_id:         this.form.guru_id,
+                        tahun_ajaran_id: this.form.tahun_ajaran_id,
+                        kelas_id:  prevKelas,
+                        mapel_id:  prevMapel,
+                        hari:      prevHari,
+                    };
+                    const nextSlot = this.jamSlots.find(s => s.jam_ke === prevJamKe + 1);
+                    if (nextSlot) {
+                        this.form.jam_ke     = String(nextSlot.jam_ke);
+                        this.form.jam_mulai  = nextSlot.jam_mulai.substring(0, 5);
+                        this.form.jam_selesai = nextSlot.jam_selesai.substring(0, 5);
                     }
+
+                    this.warningMsg = data.warnings?.length > 0 ? data.warnings.join(' | ') : '';
+                    Swal.fire({ icon: 'success', title: `Jadwal ke-${this.successCount} ditambahkan!`, text: data.message, timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
+                } else {
+                    this.updateJadwalCard(jadwal, data.warnings || []);
+                    this.modal = false;
+                    const icon = data.warnings?.length > 0 ? 'warning' : 'success';
+                    Swal.fire({ icon, title: 'Berhasil!', text: data.message, timer: 2000, showConfirmButton: false, toast: true, position: 'top-end' });
                 }
             } catch {
                 this.errorMsg = 'Gagal terhubung ke server.';
             } finally {
                 this.loading = false;
             }
+        },
+
+        insertJadwalCard(jadwal, warnings) {
+            const hariNum   = parseInt(jadwal.hari);
+            const isBentrok = warnings.length > 0;
+            const jamMulai  = (jadwal.jam_mulai  || '').substring(0, 5);
+            const jamSelesai = (jadwal.jam_selesai || '').substring(0, 5);
+            const isHariIni = hariNum === hariIni;
+            const kelasNama = kelasMap[jadwal.kelas_id]?.nama  || jadwal.kelas?.nama  || '?';
+            const mapelNama = mapelMap[jadwal.mapel_id]?.nama  || jadwal.mapel?.nama  || '?';
+
+            const cardBg = isBentrok
+                ? 'bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40'
+                : (isHariIni
+                    ? 'bg-white dark:bg-zinc-800/60 border border-amber-100 dark:border-amber-900/30'
+                    : 'bg-slate-50 dark:bg-zinc-800/40');
+            const timeColor = isBentrok ? 'text-orange-600 dark:text-orange-400' : 'text-amber-600 dark:text-amber-400';
+            const bentrokBadge = isBentrok
+                ? `<span class="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400"><i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i> Bentrok</span>`
+                : '';
+
+            const cardHTML = `
+                <div data-jadwal-id="${jadwal.id}" class="flex items-center gap-3 p-3 rounded-xl ${cardBg}">
+                    <div class="text-center w-20 flex-shrink-0">
+                        <p class="text-xs font-bold ${timeColor} font-mono">${jamMulai}</p>
+                        <p class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">${jamSelesai}</p>
+                    </div>
+                    <div class="w-px h-8 bg-slate-200 dark:bg-zinc-700 flex-shrink-0"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">${mapelNama}</p>
+                            ${bentrokBadge}
+                        </div>
+                        <p class="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
+                            <i data-lucide="school" class="w-3 h-3 flex-shrink-0"></i> Kelas ${kelasNama}
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        <button onclick="_jadwalOpenEdit(${JSON.stringify(jadwal).replace(/"/g, '&quot;')})"
+                                class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-lg transition-colors">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="_jadwalDelete(${jadwal.id}, '${mapelNama.replace(/'/g, "\\'")}')"
+                                class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>`;
+
+            let hariSection = document.querySelector(`#jadwal-list-container [data-hari="${hariNum}"]`);
+            if (!hariSection) {
+                hariSection = this._createHariSection(hariNum, isHariIni, namaHariMap[hariNum] || `Hari ${hariNum}`);
+            }
+
+            const listContainer = hariSection.querySelector('.space-y-1\\.5');
+            const template = document.createElement('template');
+            template.innerHTML = cardHTML.trim();
+            const el = template.content.firstChild;
+
+            const existingCards = [...listContainer.querySelectorAll('[data-jadwal-id]')];
+            let inserted = false;
+            for (const card of existingCards) {
+                const cardJam = card.querySelector('.font-mono')?.textContent?.trim();
+                if (cardJam && cardJam > jamMulai) { listContainer.insertBefore(el, card); inserted = true; break; }
+            }
+            if (!inserted) listContainer.appendChild(el);
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            setTimeout(() => {
+                const newCard = listContainer.querySelector(`[data-jadwal-id="${jadwal.id}"]`);
+                if (newCard) {
+                    newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    newCard.classList.add('ring-2', 'ring-amber-400', 'ring-offset-1');
+                    setTimeout(() => newCard.classList.remove('ring-2', 'ring-amber-400', 'ring-offset-1'), 2000);
+                }
+            }, 50);
+        },
+
+        updateJadwalCard(jadwal, warnings) {
+            const existingCard = document.querySelector(`[data-jadwal-id="${jadwal.id}"]`);
+            if (!existingCard) { location.reload(); return; }
+
+            const oldHari = parseInt(existingCard.closest('[data-hari]')?.dataset?.hari);
+            const newHari = parseInt(jadwal.hari);
+            if (oldHari !== newHari) { existingCard.remove(); this.insertJadwalCard(jadwal, warnings); return; }
+
+            const jamMulai   = (jadwal.jam_mulai  || '').substring(0, 5);
+            const jamSelesai = (jadwal.jam_selesai || '').substring(0, 5);
+            const mapelNama  = mapelMap[jadwal.mapel_id]?.nama || jadwal.mapel?.nama || '?';
+            const kelasNama  = kelasMap[jadwal.kelas_id]?.nama || jadwal.kelas?.nama || '?';
+
+            const monoEls = existingCard.querySelectorAll('.font-mono');
+            if (monoEls[0]) monoEls[0].textContent = jamMulai;
+            if (monoEls[1]) monoEls[1].textContent = jamSelesai;
+            const mapelEl = existingCard.querySelector('.text-sm.font-semibold');
+            if (mapelEl) mapelEl.textContent = mapelNama;
+            const kelasEl = existingCard.querySelector('.text-xs.text-slate-400');
+            if (kelasEl) kelasEl.innerHTML = `<i data-lucide="school" class="w-3 h-3 flex-shrink-0"></i> Kelas ${kelasNama}`;
+
+            const btns = existingCard.querySelectorAll('button');
+            if (btns[0]) btns[0].setAttribute('onclick', `_jadwalOpenEdit(${JSON.stringify(jadwal).replace(/"/g, '&quot;')})`);
+            if (btns[1]) btns[1].setAttribute('onclick', `_jadwalDelete(${jadwal.id}, '${mapelNama.replace(/'/g, "\\'")}')`);
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            existingCard.classList.add('ring-2', 'ring-amber-400', 'ring-offset-1');
+            setTimeout(() => existingCard.classList.remove('ring-2', 'ring-amber-400', 'ring-offset-1'), 2000);
         },
 
         async deleteJadwal(id, nama) {
@@ -536,8 +773,41 @@ function jadwalManager() {
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
             });
             const data = await res.json();
+            const card = document.querySelector(`[data-jadwal-id="${id}"]`);
+            if (card) {
+                const hariSection = card.closest('[data-hari]');
+                card.remove();
+                if (hariSection && !hariSection.querySelector('[data-jadwal-id]')) hariSection.remove();
+            }
             Swal.fire({ icon: 'success', title: 'Dihapus!', text: data.message, timer: 1200, showConfirmButton: false, toast: true, position: 'top-end' });
-            setTimeout(() => location.reload(), 1000);
+        },
+
+        _createHariSection(hariNum, isHariIni, hariNama) {
+            const bgClass   = isHariIni ? 'bg-amber-50/60 dark:bg-amber-950/10' : '';
+            const textClass = isHariIni ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-zinc-500';
+            const hariIniTag = isHariIni
+                ? `<span class="badge bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 text-[10px]"><i data-lucide="sun" class="w-2.5 h-2.5"></i> Hari ini</span>`
+                : '';
+            const html = `
+                <div data-hari="${hariNum}" class="${bgClass}">
+                    <div class="flex items-center gap-3 px-5 py-2.5">
+                        <span class="text-xs font-bold uppercase tracking-wide w-14 flex-shrink-0 ${textClass}">${hariNama}</span>
+                        ${hariIniTag}
+                    </div>
+                    <div class="pb-2 space-y-1.5 px-5"></div>
+                </div>`;
+            const template = document.createElement('template');
+            template.innerHTML = html.trim();
+            const el = template.content.firstChild;
+            const container = document.getElementById('jadwal-list-container');
+            const allSections = [...container.querySelectorAll('[data-hari]')];
+            let insertBefore = null;
+            for (const sec of allSections) {
+                if (parseInt(sec.dataset.hari) > hariNum) { insertBefore = sec; break; }
+            }
+            insertBefore ? container.insertBefore(el, insertBefore) : container.appendChild(el);
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            return el;
         },
     };
 }

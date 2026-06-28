@@ -73,7 +73,7 @@
                 <div class="p-6">
                     <div class="mb-6 flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/30 rounded-xl text-sm text-amber-800 dark:text-amber-300">
                         <i data-lucide="triangle-alert" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>
-                        <p><strong>Penting!</strong> Sebelum guru dapat mengisi jurnal, Admin <strong>wajib</strong> menyelesaikan 5 langkah setup berikut secara berurutan. Lewati satu langkah pun, sistem tidak akan berfungsi dengan benar.</p>
+                        <p><strong>Penting!</strong> Sebelum guru dapat mengisi jurnal, Admin <strong>wajib</strong> menyelesaikan 6 langkah setup berikut secara berurutan. Lewati satu langkah pun, sistem tidak akan berfungsi dengan benar.</p>
                     </div>
 
                     <div class="space-y-0">
@@ -206,6 +206,35 @@
                         <div class="flex gap-5">
                             <div class="flex flex-col items-center">
                                 <div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm">5</div>
+                                <div class="w-0.5 flex-1 bg-slate-200 dark:bg-zinc-700 mt-2"></div>
+                            </div>
+                            <div class="pb-8 flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="clock" class="w-5 h-5 text-amber-500"></i>
+                                    <h3 class="text-sm font-bold text-slate-800 dark:text-white">Tambah Jam Pelajaran</h3>
+                                </div>
+                                <p class="text-sm text-slate-500 dark:text-zinc-400 mb-3">Daftarkan referensi jam pelajaran di sekolah. Data ini diperlukan untuk jadwal mengajar.</p>
+                                <div class="bg-slate-50 dark:bg-zinc-800 rounded-xl p-4 text-sm text-slate-600 dark:text-zinc-400 space-y-2 border border-slate-200/80 dark:border-zinc-700/50">
+                                    <div class="flex items-start gap-2">
+                                        <span class="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">a</span>
+                                        <p>Buka <strong>Master Data → Jam Pelajaran</strong></p>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">b</span>
+                                        <p>Klik <strong>"Tambah Jam Pelajaran"</strong>, isi jam ke, waktu mulai, dan waktu selesai</p>
+                                    </div>
+                                    <div class="flex items-start gap-2">
+                                        <span class="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">c</span>
+                                        <p>Ulangi untuk semua jam pelajaran</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Step 6 --}}
+                        <div class="flex gap-5">
+                            <div class="flex flex-col items-center">
+                                <div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm">6</div>
                                 <div class="w-0.5 flex-1 bg-slate-200 dark:bg-zinc-700 mt-2"></div>
                             </div>
                             <div class="pb-8 flex-1">
