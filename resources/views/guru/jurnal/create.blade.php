@@ -22,9 +22,10 @@
         : ($autoFilledJadwal ? $autoJamMasuk : '')
     );
 
-    // Jam keluar default: hanya auto-fill yang mengisi jam keluar
+    // Jam keluar default: dari jadwal yang dipilih atau auto-fill
     $defaultJamKeluar = old('jam_keluar_aktual',
-        $autoFilledJadwal && !$selectedJadwal ? $autoJamKeluar : ''
+        $selectedJadwal   ? $selectedJamKeluar
+        : ($autoFilledJadwal ? $autoJamKeluar : '')
     );
 
     $isAutoFilled = $autoFilledJadwal && !$selectedJadwal && !old('kelas_id');
@@ -45,6 +46,10 @@
 
     {{-- Notifikasi auto-fill --}}
     @if($isAutoFilled)
+    @php
+        $autoGrup = $grupJadwalHariIni->first(fn($g) => $g['jadwal']->first()->id === $autoFilledJadwal->id);
+        $autoJamSelesaiGrup = $autoGrup ? substr($autoGrup['jadwal']->last()->jamPelajaran->jam_selesai, 0, 5) : substr($autoFilledJadwal->jamPelajaran->jam_selesai, 0, 5);
+    @endphp
     <div class="flex items-start gap-3 p-4 mb-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800/40 rounded-2xl">
         <div class="w-8 h-8 rounded-xl bg-green-100 dark:bg-green-900/50 flex items-center justify-center flex-shrink-0">
             <i data-lucide="sparkles" class="w-4 h-4 text-green-600 dark:text-green-400"></i>
@@ -55,7 +60,7 @@
                 Berdasarkan jadwal mengajar Anda saat ini:
                 <span class="font-semibold">{{ $autoFilledJadwal->mapel->nama }}</span>
                 di <span class="font-semibold">{{ $autoFilledJadwal->kelas->nama }}</span>
-                ({{ substr($autoFilledJadwal->jamPelajaran->jam_mulai, 0, 5) }}–{{ substr($autoFilledJadwal->jamPelajaran->jam_selesai, 0, 5) }})
+                ({{ substr($autoFilledJadwal->jamPelajaran->jam_mulai, 0, 5) }}–{{ $autoJamSelesaiGrup }})
             </p>
             <p class="text-xs text-green-500 dark:text-green-600 mt-1">Periksa kembali dan sesuaikan jika perlu sebelum menyimpan.</p>
         </div>
@@ -63,25 +68,35 @@
     @endif
 
     {{-- Jadwal Hari Ini — Pintasan --}}
-    @if($jadwalHariIni->isNotEmpty())
+    @if($grupJadwalHariIni->isNotEmpty())
     <div class="card p-4 mb-5">
         <p class="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
             <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-500"></i>
             Pintasan — Pilih Jadwal Hari Ini
         </p>
         <div class="flex flex-wrap gap-2 mb-2">
-            @foreach($jadwalHariIni as $j)
-            @php $sudah = in_array($j->id, $sudahDiisiHariIni); @endphp
+            @foreach($grupJadwalHariIni as $grup)
+            @php
+                $first      = $grup['jadwal']->first();
+                $last       = $grup['jadwal']->last();
+                $sudah      = count(array_intersect($grup['ids'], $sudahDiisiHariIni)) > 0;
+                $jamMulai   = $first->jamPelajaran->jam_mulai;
+                $jamSelesai = $last->jamPelajaran->jam_selesai;
+                $jumlahJam  = $grup['jadwal']->count();
+            @endphp
             <button type="button"
-                @click="{{ $sudah ? '' : "selectJadwal({$j->id}, {$j->kelas_id}, {$j->mapel_id}, '{$j->jamPelajaran->jam_mulai}', '{$j->jamPelajaran->jam_selesai}')" }}"
-                :class="selectedJadwalId == '{{ $j->id }}' ? 'ring-2 ring-amber-400 ring-offset-1 dark:ring-offset-zinc-900' : ''"
+                @click="{{ $sudah ? '' : "selectJadwal({$first->id}, {$first->kelas_id}, {$first->mapel_id}, '{$jamMulai}', '{$jamSelesai}')" }}"
+                :class="selectedJadwalId == '{{ $first->id }}' ? 'ring-2 ring-amber-400 ring-offset-1 dark:ring-offset-zinc-900' : ''"
                 class="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all
                     {{ $sudah
                         ? 'border-green-200 dark:border-green-800/40 bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400 cursor-default opacity-60'
                         : 'border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50 cursor-pointer' }}">
                 <i data-lucide="{{ $sudah ? 'check-circle-2' : 'calendar-plus' }}" class="w-4 h-4 flex-shrink-0"></i>
-                <span class="font-medium">{{ $j->mapel->nama }}</span>
-                <span class="text-xs opacity-70">{{ $j->kelas->nama }} · {{ substr($j->jamPelajaran->jam_mulai,0,5) }}–{{ substr($j->jamPelajaran->jam_selesai,0,5) }}</span>
+                <span class="font-medium">{{ $first->mapel->nama }}</span>
+                <span class="text-xs opacity-70">{{ $first->kelas->nama }} · {{ substr($jamMulai,0,5) }}–{{ substr($jamSelesai,0,5) }}</span>
+                @if($jumlahJam > 1)
+                <span class="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-full font-medium">{{ $jumlahJam }} jam</span>
+                @endif
                 @if($sudah)
                 <span class="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">Sudah diisi</span>
                 @endif

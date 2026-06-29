@@ -58,7 +58,7 @@ class MapelController extends Controller
                     'nama'         => $j->kelas->nama,
                     'tahun_ajaran' => $j->tahunAjaran->nama . ' — ' . $j->tahunAjaran->semester,
                     'is_aktif'     => $j->tahunAjaran->is_aktif,
-                ])->sortBy('nama')->values();
+                ])->unique(fn($k) => $k['nama'] . '|' . $k['tahun_ajaran'])->sortBy('nama')->values();
 
                 return ['guru' => $guru->nama, 'kelas' => $kelas];
             })

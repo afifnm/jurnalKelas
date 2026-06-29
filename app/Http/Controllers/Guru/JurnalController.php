@@ -40,9 +40,21 @@ class JurnalController extends Controller
 
         $sudahDiisiHariIni = $jurnalHariIni->pluck('jadwal_id')->toArray();
 
-        $selectedJadwal = null;
+        $selectedJadwal    = null;
+        $selectedJamKeluar = '';
         if ($request->filled('jadwal_id')) {
             $selectedJadwal = $jadwalHariIni->firstWhere('id', $request->jadwal_id);
+        }
+
+        $grupJadwalHariIni = Jadwal::grupkanBerurutan($jadwalHariIni);
+
+        if ($selectedJadwal) {
+            foreach ($grupJadwalHariIni as $grup) {
+                if (in_array($selectedJadwal->id, $grup['ids'])) {
+                    $selectedJamKeluar = substr($grup['jadwal']->last()->jamPelajaran->jam_selesai, 0, 5);
+                    break;
+                }
+            }
         }
 
         $autoFilledJadwal = null;
@@ -53,18 +65,22 @@ class JurnalController extends Controller
             $now         = now();
             $currentTime = $now->format('H:i:s');
 
-            foreach ($jadwalHariIni as $j) {
-                if (in_array($j->id, $sudahDiisiHariIni)) continue;
+            foreach ($grupJadwalHariIni as $grup) {
+                // Skip grup yang sudah ada jurnalnya
+                if (count(array_intersect($grup['ids'], $sudahDiisiHariIni)) > 0) continue;
 
-                $jamMulai   = \Carbon\Carbon::createFromTimeString($j->jamPelajaran->jam_mulai);
-                $jamSelesai = \Carbon\Carbon::createFromTimeString($j->jamPelajaran->jam_selesai);
+                $firstJadwal = $grup['jadwal']->first();
+                $lastJadwal  = $grup['jadwal']->last();
+
+                $jamMulai   = \Carbon\Carbon::createFromTimeString($firstJadwal->jamPelajaran->jam_mulai);
+                $jamSelesai = \Carbon\Carbon::createFromTimeString($lastJadwal->jamPelajaran->jam_selesai);
 
                 $windowMulai = $jamMulai->copy()->subMinutes(15)->format('H:i:s');
                 $windowAkhir = $jamSelesai->copy()->addMinutes(30)->format('H:i:s');
 
                 if ($currentTime >= $windowMulai && $currentTime <= $windowAkhir) {
-                    $autoFilledJadwal = $j;
-                    $autoJamMasuk  = $currentTime >= $j->jamPelajaran->jam_mulai
+                    $autoFilledJadwal = $firstJadwal;
+                    $autoJamMasuk  = $currentTime >= $firstJadwal->jamPelajaran->jam_mulai
                         ? $now->format('H:i')
                         : $jamMulai->format('H:i');
                     $autoJamKeluar = $jamSelesai->format('H:i');
@@ -82,8 +98,8 @@ class JurnalController extends Controller
         $mapel = $jadwalGuru->pluck('mapel')->unique('id')->sortBy('nama')->values();
 
         return view('guru.jurnal.create', compact(
-            'jadwalHariIni', 'sudahDiisiHariIni', 'jurnalHariIni',
-            'selectedJadwal', 'autoFilledJadwal', 'autoJamMasuk', 'autoJamKeluar',
+            'jadwalHariIni', 'sudahDiisiHariIni', 'jurnalHariIni', 'grupJadwalHariIni',
+            'selectedJadwal', 'selectedJamKeluar', 'autoFilledJadwal', 'autoJamMasuk', 'autoJamKeluar',
             'kelas', 'mapel'
         ));
     }
@@ -147,6 +163,8 @@ class JurnalController extends Controller
             ->pluck('jadwal_id')
             ->toArray();
 
+        $grupJadwalHariIni = Jadwal::grupkanBerurutan($jadwalHariIni);
+
         $jadwalGuru = Jadwal::with(['kelas', 'mapel'])
             ->where('guru_id', $guru->id)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
@@ -156,7 +174,7 @@ class JurnalController extends Controller
         $mapel = $jadwalGuru->pluck('mapel')->unique('id')->sortBy('nama')->values();
 
         return view('guru.jurnal.index', compact(
-            'jurnal', 'jadwalHariIni', 'sudahDiisiHariIni', 'kelas', 'mapel', 'tahunAktif'
+            'jurnal', 'jadwalHariIni', 'sudahDiisiHariIni', 'grupJadwalHariIni', 'kelas', 'mapel', 'tahunAktif'
         ));
     }
 

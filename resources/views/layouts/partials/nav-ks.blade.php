@@ -13,3 +13,9 @@
     <i data-lucide="notebook-text" class="w-4 h-4 flex-shrink-0"></i>
     <span>Jurnal Guru</span>
 </a>
+
+<a href="{{ route('ks.jadwal.by-kelas') }}"
+   class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all {{ str_starts_with($currentRoute, 'ks.jadwal') ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400' : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-800 dark:hover:text-zinc-100' }}">
+    <i data-lucide="calendar-days" class="w-4 h-4 flex-shrink-0"></i>
+    <span>Jadwal Pelajaran</span>
+</a>

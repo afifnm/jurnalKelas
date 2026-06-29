@@ -24,6 +24,7 @@ class DashboardController extends Controller
             ->orderBy('jam_pelajaran.hari')
             ->orderBy('jam_pelajaran.jam_ke')
             ->get()
+            ->filter(fn($j) => $j->jamPelajaran !== null)
             ->groupBy(fn($j) => $j->jamPelajaran->hari);
 
         $jadwalHariIni = $jadwalMinggu->get($hariIni, collect());
@@ -33,7 +34,9 @@ class DashboardController extends Controller
             ->pluck('jadwal_id')
             ->toArray();
 
-        $belumDiisi = $jadwalHariIni->filter(fn($j) => ! in_array($j->id, $sudahDiisiHariIni));
+        $belumDiisi        = $jadwalHariIni->filter(fn($j) => ! in_array($j->id, $sudahDiisiHariIni));
+        $grupJadwalHariIni = Jadwal::grupkanBerurutan($jadwalHariIni->sortBy(fn($j) => $j->jamPelajaran->jam_ke));
+        $grupJadwalMinggu  = $jadwalMinggu->map(fn($hariItems) => Jadwal::grupkanBerurutan($hariItems->sortBy(fn($j) => $j->jamPelajaran->jam_ke)));
 
         $jurnalBulanIni = Jurnal::where('guru_id', $guru->id)
             ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [now()->format('Y-m')])
@@ -55,6 +58,7 @@ class DashboardController extends Controller
 
         return view('guru.dashboard', compact(
             'jadwalHariIni', 'jadwalMinggu', 'sudahDiisiHariIni', 'belumDiisi',
+            'grupJadwalHariIni', 'grupJadwalMinggu',
             'jurnalBulanIni', 'jurnalTerlambatBulanIni', 'riwayatJurnal',
             'tahunAktif', 'namaHari', 'hariIni', 'totalSesi'
         ));

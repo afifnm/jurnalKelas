@@ -113,10 +113,14 @@ Route::prefix('guru')->name('guru.')->middleware(['auth', 'role:guru'])->group(f
 // --- KEPALA SEKOLAH ---
 Route::prefix('ks')->name('ks.')->middleware(['auth', 'role:ks'])->group(function () {
     Route::get('/dashboard', [Ks\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/mengajar-sekarang', [Ks\DashboardController::class, 'mengajarSekarang'])->name('dashboard.mengajar-sekarang');
+    Route::get('/dashboard/belum-isi-jurnal',  [Ks\DashboardController::class, 'belumIsiJurnal'])->name('dashboard.belum-isi-jurnal');
 
     Route::get('/jurnal',          [Ks\JurnalController::class, 'index'])->name('jurnal.index');
     Route::get('/jurnal/{jurnal}', [Ks\JurnalController::class, 'show'])->name('jurnal.show');
 
-    Route::get('/jadwal/kelas', [KsJadwalViewController::class, 'byKelas'])->name('jadwal.by-kelas');
-    Route::get('/jadwal/guru',  [KsJadwalViewController::class, 'byGuru'])->name('jadwal.by-guru');
+    Route::get('/jadwal/kelas',              [KsJadwalViewController::class, 'byKelas'])->name('jadwal.by-kelas');
+    Route::get('/jadwal/guru',               [KsJadwalViewController::class, 'byGuru'])->name('jadwal.by-guru');
+    Route::get('/jadwal/print/semua',        [KsJadwalViewController::class, 'printSemua'])->name('jadwal.print.semua');
+    Route::get('/jadwal/print/beban-mengajar', [KsJadwalViewController::class, 'printBebanMengajar'])->name('jadwal.print.beban-mengajar');
 });

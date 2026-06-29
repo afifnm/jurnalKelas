@@ -19,22 +19,25 @@ class Jadwal extends Model
 
     public function guru(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'guru_id')->withTrashed();
+        return $this->belongsTo(User::class, 'guru_id')
+            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     public function kelas(): BelongsTo
     {
-        return $this->belongsTo(Kelas::class)->withTrashed();
+        return $this->belongsTo(Kelas::class)
+            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     public function mapel(): BelongsTo
     {
-        return $this->belongsTo(Mapel::class)->withTrashed();
+        return $this->belongsTo(Mapel::class)
+            ->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
     }
 
     public function tahunAjaran(): BelongsTo
     {
-        return $this->belongsTo(TahunAjaran::class)->withTrashed();
+        return $this->belongsTo(TahunAjaran::class);
     }
 
     public function jamPelajaran(): BelongsTo
@@ -80,5 +83,41 @@ class Jadwal extends Model
     public static function getNamaHariList(): array
     {
         return [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+    }
+
+    /**
+     * Kelompokkan jadwal yang Mapel+Kelas sama dan jam berurutan menjadi satu grup sesi.
+     * Input harus sudah di-sort berdasarkan jam_ke ASC.
+     * Return: Collection of ['jadwal' => Collection<Jadwal>, 'ids' => int[]]
+     */
+    public static function grupkanBerurutan(\Illuminate\Support\Collection $jadwal): \Illuminate\Support\Collection
+    {
+        $groups  = collect();
+        $current = null;
+
+        foreach ($jadwal as $j) {
+            if ($current === null) {
+                $current = ['jadwal' => collect([$j]), 'ids' => [$j->id]];
+            } else {
+                $last           = $current['jadwal']->last();
+                $sameMapelKelas = $last->mapel_id === $j->mapel_id && $last->kelas_id === $j->kelas_id;
+                $berurutan      = ($last->jamPelajaran->jam_ke + 1 === $j->jamPelajaran->jam_ke)
+                               || ($last->jamPelajaran->jam_selesai === $j->jamPelajaran->jam_mulai);
+
+                if ($sameMapelKelas && $berurutan) {
+                    $current['jadwal']->push($j);
+                    $current['ids'][] = $j->id;
+                } else {
+                    $groups->push($current);
+                    $current = ['jadwal' => collect([$j]), 'ids' => [$j->id]];
+                }
+            }
+        }
+
+        if ($current !== null) {
+            $groups->push($current);
+        }
+
+        return $groups;
     }
 }

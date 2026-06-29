@@ -40,7 +40,7 @@ class JadwalViewController extends Controller
 
         $jadwalPerKelas = collect();
         foreach ($kelasList as $kelas) {
-            $jadwal = $allJadwalKelas->get($kelas->id, collect())->groupBy(fn($j) => $j->jamPelajaran->hari);
+            $jadwal = $allJadwalKelas->get($kelas->id, collect())->filter(fn($j) => $j->jamPelajaran !== null)->groupBy(fn($j) => $j->jamPelajaran->hari);
             $jadwalPerKelas[$kelas->id] = [
                 'kelas'  => $kelas,
                 'jadwal' => $jadwal,
@@ -51,10 +51,11 @@ class JadwalViewController extends Controller
         $mapel        = Mapel::orderBy('nama')->get();
         $konflikIds   = $this->getKonflikIds($tahunId);
         $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get();
+        $waktuIni     = now()->format('H:i:s');
 
-        return view('admin.jadwal.by-kelas', compact(
+        return view('jadwal.by-kelas', compact(
             'tahunAjaran', 'tahunAktif', 'kelasList', 'namaHari',
-            'jadwalPerKelas', 'tahunId', 'kelasId', 'hariIni',
+            'jadwalPerKelas', 'tahunId', 'kelasId', 'hariIni', 'waktuIni',
             'guru', 'mapel', 'konflikIds', 'jamPelajaran'
         ));
     }
@@ -82,7 +83,7 @@ class JadwalViewController extends Controller
 
         $jadwalPerGuru = collect();
         foreach ($guruList as $guru) {
-            $jadwal = $allJadwalGuru->get($guru->id, collect())->groupBy(fn($j) => $j->jamPelajaran->hari);
+            $jadwal = $allJadwalGuru->get($guru->id, collect())->filter(fn($j) => $j->jamPelajaran !== null)->groupBy(fn($j) => $j->jamPelajaran->hari);
             $jadwalPerGuru[$guru->id] = [
                 'guru'   => $guru,
                 'jadwal' => $jadwal,
@@ -93,10 +94,11 @@ class JadwalViewController extends Controller
         $mapel        = Mapel::orderBy('nama')->get();
         $konflikIds   = $this->getKonflikIds($tahunId);
         $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get();
+        $waktuIni     = now()->format('H:i:s');
 
-        return view('admin.jadwal.by-guru', compact(
+        return view('jadwal.by-guru', compact(
             'tahunAjaran', 'tahunAktif', 'guruList', 'namaHari',
-            'jadwalPerGuru', 'tahunId', 'hariIni', 'guruId',
+            'jadwalPerGuru', 'tahunId', 'hariIni', 'guruId', 'waktuIni',
             'kelas', 'mapel', 'konflikIds', 'jamPelajaran'
         ));
     }
@@ -156,7 +158,7 @@ class JadwalViewController extends Controller
             )->get();
 
         // [hariNum => [jam_mulai|jam_selesai => [kelas_id => jadwal]]]
-        $jadwalByHari = $allJadwal->groupBy(fn($j) => $j->jamPelajaran->hari)->map(function ($byHari) {
+        $jadwalByHari = $allJadwal->filter(fn($j) => $j->jamPelajaran !== null)->groupBy(fn($j) => $j->jamPelajaran->hari)->map(function ($byHari) {
             return $byHari
                 ->groupBy(fn($j) => $j->jamPelajaran->jam_mulai . '|' . $j->jamPelajaran->jam_selesai)
                 ->map(fn($bySlot) => $bySlot->keyBy('kelas_id'));
@@ -188,6 +190,7 @@ class JadwalViewController extends Controller
             ->orderBy('jam_pelajaran.hari')
             ->orderBy('jam_pelajaran.jam_ke')
             ->get()
+            ->filter(fn($j) => $j->jamPelajaran !== null)
             ->groupBy(fn($j) => $j->jamPelajaran->hari);
 
         $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get()->groupBy('hari');
@@ -210,6 +213,7 @@ class JadwalViewController extends Controller
             ->orderBy('jam_pelajaran.hari')
             ->orderBy('jam_pelajaran.jam_ke')
             ->get()
+            ->filter(fn($j) => $j->jamPelajaran !== null)
             ->groupBy(fn($j) => $j->jamPelajaran->hari);
 
         $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get()->groupBy('hari');
@@ -245,23 +249,27 @@ class JadwalViewController extends Controller
         $jurnalByJadwal   = $allJurnal->groupBy(fn($j) => $j->jadwal_id . '|' . $j->tanggal->format('Y-m-d'));
         $jurnalByFallback = $allJurnal->groupBy(fn($j) => $j->guru_id . '|' . $j->mapel_id . '|' . $j->tanggal->format('Y-m-d'));
 
+        $grupPerHari = Jadwal::grupkanBerurutan($allJadwal)->groupBy(fn($g) => $g['jadwal']->first()->jamPelajaran->hari);
+
         $laporan = [];
         $current = $dari->copy()->startOfDay();
         $end     = $sampai->copy()->startOfDay();
 
         while ($current->lte($end)) {
-            $hariNum    = $current->dayOfWeekIso;
-            $jadwalHari = $allJadwal->filter(fn($j) => $j->jamPelajaran->hari == $hariNum)->sortBy(fn($j) => $j->jamPelajaran->jam_ke);
+            $hariNum = $current->dayOfWeekIso;
+            $grups   = $grupPerHari->get($hariNum, collect());
 
-            if ($jadwalHari->isNotEmpty()) {
+            if ($grups->isNotEmpty()) {
                 $entries = [];
-                foreach ($jadwalHari as $jadwal) {
-                    $key    = $jadwal->id . '|' . $current->format('Y-m-d');
-                    $fbKey  = $jadwal->guru_id . '|' . $jadwal->mapel_id . '|' . $current->format('Y-m-d');
+                foreach ($grups as $grup) {
+                    $firstJadwal = $grup['jadwal']->first();
+                    $lastJadwal  = $grup['jadwal']->last();
+                    $key   = $firstJadwal->id . '|' . $current->format('Y-m-d');
+                    $fbKey = $firstJadwal->guru_id . '|' . $firstJadwal->mapel_id . '|' . $current->format('Y-m-d');
                     $jurnal = $jurnalByJadwal->get($key)?->first()
                         ?? $jurnalByFallback->get($fbKey)?->first();
 
-                    $entries[] = ['jadwal' => $jadwal, 'jurnal' => $jurnal];
+                    $entries[] = ['jadwal' => $firstJadwal, 'lastJadwal' => $lastJadwal, 'jumlahJam' => count($grup['ids']), 'jurnal' => $jurnal];
                 }
                 $laporan[] = ['tanggal' => $current->copy(), 'hari' => $hariNum, 'entries' => $entries];
             }
@@ -304,23 +312,27 @@ class JadwalViewController extends Controller
         $jurnalByJadwal   = $allJurnal->groupBy(fn($j) => $j->jadwal_id . '|' . $j->tanggal->format('Y-m-d'));
         $jurnalByFallback = $allJurnal->groupBy(fn($j) => $j->kelas_id . '|' . $j->mapel_id . '|' . $j->tanggal->format('Y-m-d'));
 
+        $grupPerHari = Jadwal::grupkanBerurutan($allJadwal)->groupBy(fn($g) => $g['jadwal']->first()->jamPelajaran->hari);
+
         $laporan = [];
         $current = $dari->copy()->startOfDay();
         $end     = $sampai->copy()->startOfDay();
 
         while ($current->lte($end)) {
-            $hariNum    = $current->dayOfWeekIso;
-            $jadwalHari = $allJadwal->filter(fn($j) => $j->jamPelajaran->hari == $hariNum)->sortBy(fn($j) => $j->jamPelajaran->jam_ke);
+            $hariNum = $current->dayOfWeekIso;
+            $grups   = $grupPerHari->get($hariNum, collect());
 
-            if ($jadwalHari->isNotEmpty()) {
+            if ($grups->isNotEmpty()) {
                 $entries = [];
-                foreach ($jadwalHari as $jadwal) {
-                    $key    = $jadwal->id . '|' . $current->format('Y-m-d');
-                    $fbKey  = $jadwal->kelas_id . '|' . $jadwal->mapel_id . '|' . $current->format('Y-m-d');
+                foreach ($grups as $grup) {
+                    $firstJadwal = $grup['jadwal']->first();
+                    $lastJadwal  = $grup['jadwal']->last();
+                    $key   = $firstJadwal->id . '|' . $current->format('Y-m-d');
+                    $fbKey = $firstJadwal->kelas_id . '|' . $firstJadwal->mapel_id . '|' . $current->format('Y-m-d');
                     $jurnal = $jurnalByJadwal->get($key)?->first()
                         ?? $jurnalByFallback->get($fbKey)?->first();
 
-                    $entries[] = ['jadwal' => $jadwal, 'jurnal' => $jurnal];
+                    $entries[] = ['jadwal' => $firstJadwal, 'lastJadwal' => $lastJadwal, 'jumlahJam' => count($grup['ids']), 'jurnal' => $jurnal];
                 }
                 $laporan[] = ['tanggal' => $current->copy(), 'hari' => $hariNum, 'entries' => $entries];
             }

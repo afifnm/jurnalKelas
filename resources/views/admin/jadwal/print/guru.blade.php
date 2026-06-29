@@ -250,7 +250,7 @@
       <div>
         <div class="guru-nama">{{ $guru->nama }}</div>
         <div class="guru-meta">
-          {{ $jadwal->flatten()->count() }} sesi/minggu
+          {{ $jadwal->flatten()->count() }} JP/minggu
           &nbsp;·&nbsp;
           {{ $jadwal->count() }} hari mengajar
           &nbsp;·&nbsp;

@@ -177,9 +177,9 @@ td.font-bold { font-weight: 700; }
           @foreach($kelasGrouped as $tingkat => $kelasArray)
             <th colspan="{{ count($kelasArray) }}">{{ $tingkat }}</th>
           @endforeach
-          <th rowspan="2" style="width: 3%;">Jml Mngjr</th>
-          <th rowspan="2" style="width: 3%;">Jam Tgs</th>
-          <th rowspan="2" style="width: 3%;">Tot JP</th>
+          <th rowspan="2" style="width: 3%;">Jml JP Mengajar</th>
+          <th rowspan="2" style="width: 3%;">Jam Tugas</th>
+          <th rowspan="2" style="width: 3%;">Total JP</th>
         </tr>
         <tr>
           @foreach($kelasGrouped as $tingkat => $kelasArray)
@@ -199,8 +199,7 @@ td.font-bold { font-weight: 700; }
                 $isNewGuru = ($row['guru_id'] !== $currentGuruId);
                 if ($isNewGuru) {
                     $currentGuruId = $row['guru_id'];
-                    
-                    // Hitung rowspan untuk guru ini
+
                     $rowspan = 0;
                     $totalMengajarGuru = 0;
                     foreach ($rowsData as $r) {
@@ -211,16 +210,10 @@ td.font-bold { font-weight: 700; }
                             }
                         }
                     }
-                    
-                    $jabatan = $jabatanData[$currentGuruId] ?? null;
+
+                    $jabatan  = $jabatanData[$currentGuruId] ?? null;
                     $jamTugas = $jabatan ? (int)($jabatan['jumlah_jam'] ?? 0) : 0;
-                    $namaTugas = $jabatan ? ($jabatan['nama_jabatan'] ?? '-') : '-';
                     $totalSemua = $totalMengajarGuru + $jamTugas;
-                }
-                
-                $barisTotalMapel = 0;
-                foreach ($row['kelas_hours'] as $jp) {
-                    $barisTotalMapel += (int)$jp;
                 }
             @endphp
             <tr>
@@ -231,22 +224,16 @@ td.font-bold { font-weight: 700; }
                         <span style="color: #64748b;">{{ $row['guru_kode'] }}</span>
                     </td>
                 @endif
-                
+
                 <td>{{ $row['mapel_nama'] }}</td>
-                
+
                 @foreach($kelasGrouped as $tingkat => $kelasArray)
                     @foreach($kelasArray as $kelas)
-                        @php
-                            $jp = $row['kelas_hours']->{$kelas->id} ?? '';
-                        @endphp
-                        <td class="text-center {{ $jp ? 'bg-slate-50 font-bold' : '' }}">
-                            {{ $jp }}
-                        </td>
+                        @php $jp = $row['kelas_hours']->{$kelas->id} ?? ''; @endphp
+                        <td class="text-center {{ $jp ? 'bg-slate-50 font-bold' : '' }}">{{ $jp }}</td>
                     @endforeach
                 @endforeach
-                
-                <td class="text-center font-bold bg-slate-50">{{ $barisTotalMapel ?: '' }}</td>
-                
+
                 @if($isNewGuru)
                     <td class="text-center font-bold bg-slate-50" rowspan="{{ $rowspan }}">{{ $totalMengajarGuru ?: '' }}</td>
                     <td class="text-center" rowspan="{{ $rowspan }}">{{ $jamTugas ?: '' }}</td>

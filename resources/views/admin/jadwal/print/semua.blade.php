@@ -6,8 +6,8 @@
 <title>Jadwal Pelajaran – {{ $tahunAktif?->nama }} {{ $tahunAktif?->semester }}</title>
 <style>
 @page {
-  size: 330mm 210mm;
-  margin: 7mm 10mm;
+  size: A3 landscape;
+  margin: 8mm 10mm;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,12 +35,9 @@ body {
   color: #fff;
   padding: 9px 14px;
   border-radius: 8px;
-  margin-bottom: 14px;
   gap: 10px;
-  max-width: 1100px;
-  margin-left: auto;
-  margin-right: auto;
-  margin-bottom: 14px;
+  max-width: 1400px;
+  margin: 0 auto 14px;
 }
 .toolbar-left { font-size: 12px; opacity: .8; }
 .toolbar-btns { display: flex; gap: 7px; flex-shrink: 0; }
@@ -56,7 +53,7 @@ body {
 
 /* Screen document shell */
 .doc-screen {
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   background: #fff;
   box-shadow: 0 4px 24px rgba(0,0,0,.15);
@@ -98,7 +95,7 @@ table.timetable {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 6.8pt;
+  font-size: 7pt;
 }
 
 table.timetable th,
@@ -162,17 +159,11 @@ td.td-jadwal.has-jadwal { background: #fefce8; }
   font-weight: 700;
   font-size: 7pt;
   color: #1e293b;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .cell-user {
   display: block;
   font-size: 5.8pt;
   color: #64748b;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Separator between hari */
@@ -229,16 +220,6 @@ tr.hari-separator td { border-top: 1.2pt solid #334155 !important; }
 </style>
 </head>
 <body>
-@php
-/* Helper: kode singkat mapel */
-$getKode = function($mapel) {
-    if ($mapel->kode) return $mapel->kode;
-    $words = preg_split('/[\s\/\-]+/', trim($mapel->nama));
-    $abbr  = collect($words)->map(fn($w) => strtoupper(substr($w, 0, 1)))->join('');
-    return $abbr ?: strtoupper(substr($mapel->nama, 0, 3));
-};
-@endphp
-
 <div class="screen-wrapper">
 
   {{-- Toolbar (screen only) --}}
@@ -319,7 +300,7 @@ $getKode = function($mapel) {
                     @php $j = $byKelas->get($kelas->id); @endphp
                     <td class="td-jadwal {{ $j ? 'has-jadwal' : '' }}">
                       @if($j)
-                        <span class="cell-kode">{{ $getKode($j->mapel) }}</span>
+                        <span class="cell-kode">{{ $j->mapel->kode ?? $j->mapel->nama }}</span>
                         <span class="cell-user">{{ $j->guru->username }}</span>
                       @endif
                     </td>
@@ -334,22 +315,30 @@ $getKode = function($mapel) {
     @endif
 
     {{-- Legend --}}
-    <div class="legend">
+    <div class="legend" style="margin-top:8px;">
       <div class="legend-block">
-        <div class="legend-title">Keterangan Mata Pelajaran</div>
+        <div class="legend-title">Keterangan Kode Mata Pelajaran</div>
         <div class="legend-items">
           @foreach($mapelUsed as $m)
-          <span><span class="legend-kode">{{ $getKode($m) }}</span> = {{ $m->nama }}&nbsp;&nbsp;</span>
+          <span><span class="legend-kode">{{ $m->kode ?? $m->nama }}</span> = {{ $m->nama }}</span>
           @endforeach
         </div>
       </div>
       <div class="legend-block">
-        <div class="legend-title">Keterangan Guru</div>
+        <div class="legend-title">Keterangan Kode Guru</div>
         <div class="legend-items">
           @foreach($guruUsed as $g)
-          <span><span class="legend-kode">{{ $g->username }}</span> = {{ $g->nama }}&nbsp;&nbsp;</span>
+          <span><span class="legend-kode">{{ $g->username }}</span> = {{ $g->nama }}</span>
           @endforeach
         </div>
+      </div>
+    </div>
+
+    {{-- Tanda tangan --}}
+    <div style="display:flex; justify-content:flex-end; margin-top:10px; padding-top:8px; border-top:1pt solid #aaa;">
+      <div style="text-align:center;">
+        <div style="font-size:7pt; color:#475569; margin-bottom:36px;">Mengetahui,<br>Kepala Sekolah</div>
+        <div style="font-size:8pt; font-weight:700; border-top:1pt solid #111; padding-top:3px; min-width:160px;">{{ $sekolah?->kepala_sekolah ?? '.................................' }}</div>
       </div>
     </div>
 

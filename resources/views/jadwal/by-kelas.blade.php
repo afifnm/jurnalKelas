@@ -1,10 +1,28 @@
+@php
+    $isAdmin = auth()->user()->hasRole('admin');
+    $isGuru  = auth()->user()->hasRole('guru');
+    $isKs    = auth()->user()->hasRole('ks');
+
+    $routeByGuru  = $isAdmin ? 'admin.jadwal.by-guru'  : ($isGuru ? 'guru.jadwal.index'   : 'ks.jadwal.by-guru');
+    $routeByKelas = $isAdmin ? 'admin.jadwal.index'    : ($isGuru ? 'guru.jadwal.by-kelas' : 'ks.jadwal.by-kelas');
+    $rolePrefix   = $isAdmin ? 'admin' : ($isGuru ? 'guru' : 'ks');
+@endphp
+
 @extends('layouts.app')
-@section('title', 'Jadwal Mengajar')
-@section('page-title', 'Jadwal Mengajar')
+@section('title', 'Jadwal per Kelas')
+@section('page-title', 'Jadwal per Kelas')
 @section('breadcrumb')
-    <i data-lucide="home" class="w-3 h-3"></i><span>Admin</span>
-    <i data-lucide="chevron-right" class="w-3 h-3"></i><span>Jadwal</span>
-    <i data-lucide="chevron-right" class="w-3 h-3"></i><span class="text-slate-700 dark:text-zinc-200 font-medium">Per Kelas</span>
+    <i data-lucide="home" class="w-3 h-3"></i>
+    <span>{{ $isAdmin ? 'Admin' : ($isGuru ? 'Guru' : 'Kepala Sekolah') }}</span>
+    <i data-lucide="chevron-right" class="w-3 h-3"></i>
+    @if($isAdmin)
+        <a href="{{ route('admin.jadwal.index') }}" class="hover:text-amber-500">Jadwal</a>
+        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+    @elseif($isGuru)
+        <a href="{{ route('guru.jadwal.index') }}" class="hover:text-amber-500">Jadwal</a>
+        <i data-lucide="chevron-right" class="w-3 h-3"></i>
+    @endif
+    <span class="text-slate-700 dark:text-zinc-200 font-medium">Per Kelas</span>
 @endsection
 
 @section('content')
@@ -12,44 +30,21 @@
 
 <div class="flex items-center justify-between mb-5">
     <div>
-        <h2 class="text-lg font-bold text-slate-800 dark:text-white">Jadwal Mengajar</h2>
-        <p class="text-sm text-slate-400 dark:text-zinc-500">Kelola jadwal pelajaran setiap kelas</p>
+        <h2 class="text-lg font-bold text-slate-800 dark:text-white">Jadwal per Kelas</h2>
+        <p class="text-sm text-slate-400 dark:text-zinc-500">
+            {{ $isAdmin ? 'Kelola jadwal pelajaran setiap kelas' : 'Jadwal pelajaran tiap kelas' }}
+        </p>
     </div>
     <div class="flex items-center gap-2">
+        @if($isAdmin)
         <a href="{{ route('admin.jadwal.mapping') }}" class="btn-secondary text-sm !bg-purple-50 !text-purple-600 !border-purple-200 hover:!bg-purple-100 dark:!bg-purple-900/30 dark:!border-purple-800 dark:hover:!bg-purple-900/50">
-            <i data-lucide="grip-horizontal" class="w-4 h-4"></i> Mapping (Drag & Drop)
+            <i data-lucide="grip-horizontal" class="w-4 h-4"></i> Mapping (Drag &amp; Drop)
         </a>
-        <a href="{{ route('admin.jadwal.by-guru') }}" class="btn-secondary text-sm">
+        @endif
+        <a href="{{ route($routeByGuru) }}" class="btn-secondary text-sm">
             <i data-lucide="user-check" class="w-4 h-4"></i> Lihat per Guru
         </a>
     </div>
-</div>
-
-{{-- Filter --}}
-<div class="flex items-center gap-2 mb-5">
-    <form method="GET" class="flex items-center gap-2">
-        <input type="hidden" name="kelas_id" value="{{ $kelasId }}">
-        <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 flex-shrink-0"></i>
-        <select name="tahun_ajaran_id" onchange="this.form.submit()"
-                class="text-xs border border-slate-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 cursor-pointer">
-            <option value="">Semua Tahun Ajaran</option>
-            @foreach($tahunAjaran as $ta)
-                <option value="{{ $ta->id }}" @selected($tahunId == $ta->id)>
-                    {{ $ta->nama }} – {{ $ta->semester }}{{ $ta->is_aktif ? ' ✓' : '' }}
-                </option>
-            @endforeach
-        </select>
-        @if($tahunId)
-        <a href="{{ route('admin.jadwal.index', ['kelas_id' => $kelasId]) }}"
-           class="text-xs text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors" title="Reset filter">
-            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
-        </a>
-        @endif
-    </form>
-    <span class="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 ml-auto">
-        <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
-        {{ $namaHari[$hariIni] ?? '' }}
-    </span>
 </div>
 
 @if($kelasList->isEmpty())
@@ -68,7 +63,7 @@
             $jumlahJadwal = collect($jadwalPerKelas[$kelas->id]['jadwal'] ?? [])->flatten()->count();
             $isActive = $kelasId == $kelas->id;
         @endphp
-        <a href="{{ route('admin.jadwal.index', array_filter(['kelas_id' => $kelas->id, 'tahun_ajaran_id' => $tahunId])) }}"
+        <a href="{{ route($routeByKelas, array_filter(['kelas_id' => $kelas->id])) }}"
            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all
                {{ $isActive
                    ? 'bg-amber-400 text-zinc-900 shadow-sm'
@@ -97,14 +92,14 @@
             $jumlahJadwal = collect($jadwalPerKelas[$kelas->id]['jadwal'] ?? [])->flatten()->count();
             $isActive = $kelasId == $kelas->id;
         @endphp
-        <a href="{{ route('admin.jadwal.index', array_filter(['kelas_id' => $kelas->id, 'tahun_ajaran_id' => $tahunId])) }}"
+        <a href="{{ route($routeByKelas, array_filter(['kelas_id' => $kelas->id])) }}"
            class="flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all
                {{ $isActive
                    ? 'bg-amber-400 text-zinc-900 shadow-sm'
                    : 'text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800' }}">
             <div class="flex items-center gap-1.5 min-w-0">
                 <i data-lucide="school" class="w-3 h-3 flex-shrink-0 {{ $isActive ? '' : 'text-slate-400 dark:text-zinc-500' }}"></i>
-                <span class="whitespace-nowrap">{{ $kelas->nama }}</span>
+                <span class="whitespace-nowrap truncate">{{ $kelas->nama }}</span>
             </div>
             @if($jumlahJadwal > 0)
             <span class="flex-shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-semibold
@@ -119,13 +114,34 @@
 
     {{-- Konten jadwal kelas aktif --}}
     @php
-        $dataKelas    = $jadwalPerKelas[$kelasId] ?? null;
-        $kelasAktif   = $dataKelas['kelas'] ?? $kelasList->firstWhere('id', $kelasId);
-        $jadwalGrouped = $dataKelas['jadwal'] ?? collect();
+        $dataKelas      = $jadwalPerKelas[$kelasId] ?? null;
+        $kelasAktif     = $dataKelas['kelas'] ?? $kelasList->firstWhere('id', $kelasId);
+        $jadwalGrouped  = $dataKelas['jadwal'] ?? collect();
+        $jadwalHariIniKelas = $jadwalGrouped->get($hariIni, collect());
         $tahunUntukForm = $tahunId ?? $tahunAktif?->id;
     @endphp
 
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0 space-y-4">
+
+        {{-- Statistik --}}
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div class="card p-4">
+                <p class="text-2xl font-bold text-slate-800 dark:text-white">{{ collect($jadwalGrouped)->flatten()->count() }}</p>
+                <p class="text-xs text-slate-400 dark:text-zinc-500 mt-1">Total JP/minggu</p>
+            </div>
+            <div class="card p-4">
+                <p class="text-2xl font-bold text-slate-800 dark:text-white">{{ $jadwalGrouped->count() }}</p>
+                <p class="text-xs text-slate-400 dark:text-zinc-500 mt-1">Hari belajar</p>
+            </div>
+            <div class="card p-4 {{ $jadwalHariIniKelas->isNotEmpty() ? 'border-amber-200 dark:border-amber-800/40' : '' }}">
+                <p class="text-2xl font-bold {{ $jadwalHariIniKelas->isNotEmpty() ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-white' }}">
+                    {{ $jadwalHariIniKelas->count() }}
+                </p>
+                <p class="text-xs text-slate-400 dark:text-zinc-500 mt-1">JP hari ini</p>
+            </div>
+        </div>
+
+        {{-- Tabel jadwal --}}
         <div class="card overflow-hidden">
             <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-zinc-700/50">
                 <div class="flex items-center gap-3 min-w-0">
@@ -141,18 +157,38 @@
                 </div>
                 <div class="flex items-center gap-1.5 flex-shrink-0">
                     @if($kelasAktif)
+                    {{-- Laporan Jurnal (admin & guru) --}}
+                    @if($isAdmin || $isGuru)
                     <button @click="openLaporan({{ $kelasAktif->id }})"
                             class="btn-secondary text-xs py-1.5 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/30">
                         <i data-lucide="file-bar-chart-2" class="w-3.5 h-3.5"></i>
                         <span class="hidden sm:inline">Laporan Jurnal</span>
                     </button>
+                    @endif
+
+                    {{-- Cetak --}}
+                    @if($isAdmin)
                     <a href="{{ route('admin.jadwal.print.kelas', array_filter(['kelas' => $kelasId, 'tahun_ajaran_id' => $tahunId])) }}"
-                       target="_blank"
-                       class="btn-secondary text-xs py-1.5">
+                       target="_blank" class="btn-secondary text-xs py-1.5">
                         <i data-lucide="printer" class="w-3.5 h-3.5"></i>
                         <span class="hidden sm:inline">Cetak</span>
                     </a>
-                    @if($tahunUntukForm)
+                    @elseif($isGuru)
+                    <a href="{{ route('guru.jadwal.print.kelas', array_filter(['kelas' => $kelasId, 'tahun_ajaran_id' => $tahunId])) }}"
+                       target="_blank" class="btn-secondary text-xs py-1.5">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Cetak</span>
+                    </a>
+                    @elseif($isKs)
+                    <a href="{{ route('ks.jadwal.print.semua', array_filter(['tahun_ajaran_id' => $tahunId])) }}"
+                       target="_blank" class="btn-secondary text-xs py-1.5">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Cetak Semua</span>
+                    </a>
+                    @endif
+
+                    {{-- Tambah (admin only) --}}
+                    @if($isAdmin && $tahunUntukForm)
                     <button @click="openCreate({{ $kelasId }}, {{ $tahunUntukForm }})"
                             class="btn-primary text-xs py-1.5">
                         <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>
@@ -167,7 +203,7 @@
             <div class="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-zinc-600">
                 <i data-lucide="calendar-x-2" class="w-10 h-10 mb-2 opacity-40"></i>
                 <p class="text-sm mb-3">Belum ada jadwal untuk kelas ini</p>
-                @if($kelasAktif && $tahunUntukForm)
+                @if($isAdmin && $kelasAktif && $tahunUntukForm)
                 <button @click="openCreate({{ $kelasId }}, {{ $tahunUntukForm }})"
                         class="btn-primary text-xs py-1.5">
                     <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i> Tambah Jadwal Pertama
@@ -185,32 +221,50 @@
                             {{ $hariNum == $hariIni ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-zinc-500' }}">
                             {{ $hariNama }}
                         </span>
-                        @if($hariNum == $hariIni)
-                        <span class="badge bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 text-[10px]">
-                            <i data-lucide="sun" class="w-2.5 h-2.5"></i> Hari ini
-                        </span>
-                        @endif
                     </div>
                     <div class="pb-2 space-y-1.5 px-5">
-                        @foreach($jadwalHari->sortBy(fn($j) => $j->jamPelajaran->jam_ke) as $j)
-                        @php $isBentrok = in_array($j->id, $konflikIds); @endphp
+                        @php $grups = \App\Models\Jadwal::grupkanBerurutan($jadwalHari->sortBy(fn($j) => $j->jamPelajaran->jam_ke)); @endphp
+                        @foreach($grups as $grup)
+                        @php
+                            $j         = $grup['jadwal']->first();
+                            $jLast     = $grup['jadwal']->last();
+                            $jumlahJam = $grup['jadwal']->count();
+                            $isBentrok = isset($konflikIds) && count(array_intersect($grup['ids'], $konflikIds)) > 0;
+
+                            $sedangMengajar = ($isKs || $isAdmin) && $hariNum == $hariIni
+                                && $j->jamPelajaran->jam_mulai <= $waktuIni
+                                && $jLast->jamPelajaran->jam_selesai >= $waktuIni;
+                        @endphp
                         <div data-jadwal-id="{{ $j->id }}" class="flex items-center gap-3 p-3 rounded-xl
                             {{ $isBentrok
                                 ? 'bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40'
-                                : ($hariNum == $hariIni
-                                    ? 'bg-white dark:bg-zinc-800/60 border border-amber-100 dark:border-amber-900/30'
-                                    : 'bg-slate-50 dark:bg-zinc-800/40') }}">
+                                : ($sedangMengajar
+                                    ? 'bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40'
+                                    : ($hariNum == $hariIni
+                                        ? 'bg-white dark:bg-zinc-800/60 border border-amber-100 dark:border-amber-900/30'
+                                        : 'bg-slate-50 dark:bg-zinc-800/40')) }}">
                             <div class="text-center w-20 flex-shrink-0">
-                                <p class="text-xs font-bold {{ $isBentrok ? 'text-orange-600 dark:text-orange-400' : 'text-amber-600 dark:text-amber-400' }} font-mono">{{ substr($j->jamPelajaran->jam_mulai, 0, 5) }}</p>
-                                <p class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">{{ substr($j->jamPelajaran->jam_selesai, 0, 5) }}</p>
+                                <p class="text-xs font-bold font-mono
+                                    {{ ($isBentrok || $sedangMengajar) ? 'text-orange-600 dark:text-orange-400' : 'text-amber-600 dark:text-amber-400' }}">
+                                    {{ substr($j->jamPelajaran->jam_mulai, 0, 5) }}
+                                </p>
+                                <p class="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">{{ substr($jLast->jamPelajaran->jam_selesai, 0, 5) }}</p>
                             </div>
                             <div class="w-px h-8 bg-slate-200 dark:bg-zinc-700 flex-shrink-0"></div>
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-1.5">
+                                <div class="flex items-center gap-1.5 flex-wrap">
                                     <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{{ $j->mapel->nama }}</p>
+                                    @if($jumlahJam > 1)
+                                    <span class="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">{{ $jumlahJam }} JP</span>
+                                    @endif
                                     @if($isBentrok)
                                     <span class="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400">
                                         <i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i> Bentrok
+                                    </span>
+                                    @elseif($sedangMengajar)
+                                    <span class="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400">
+                                        <span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-orange-500"></span></span>
+                                        Sedang berlangsung
                                     </span>
                                     @endif
                                 </div>
@@ -219,6 +273,8 @@
                                     {{ $j->guru->nama }}
                                 </p>
                             </div>
+                            {{-- Tombol aksi (admin) --}}
+                            @if($isAdmin)
                             <div class="flex items-center gap-1 flex-shrink-0">
                                 <button onclick="_jadwalOpenEdit({{ $j->toJson() }})"
                                         class="inline-flex items-center px-2 py-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-lg transition-colors">
@@ -229,6 +285,13 @@
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                 </button>
                             </div>
+                            @elseif($isGuru && $hariNum == $hariIni && $j->guru_id === auth()->id())
+                            <a href="{{ route('guru.jurnal.create', ['jadwal_id' => $j->id]) }}"
+                               class="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-zinc-900 text-xs font-semibold rounded-lg transition-colors">
+                                <i data-lucide="notebook-pen" class="w-3.5 h-3.5"></i>
+                                <span class="hidden sm:inline">Isi Jurnal</span>
+                            </a>
+                            @endif
                         </div>
                         @endforeach
                     </div>
@@ -243,7 +306,8 @@
 </div>
 @endif
 
-{{-- Laporan Jurnal Modal --}}
+{{-- Laporan Jurnal Modal (admin & guru) --}}
+@if($isAdmin || $isGuru)
 <div x-show="laporanModal" x-transition.opacity
      x-effect="document.documentElement.style.overflow = laporanModal ? 'hidden' : ''"
      class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
@@ -263,36 +327,24 @@
             <div>
                 <p class="text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Shortcut Periode</p>
                 <div class="flex gap-2 flex-wrap">
-                    <button @click="setMingguIni()"
-                            class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-purple-100 dark:hover:bg-purple-950/40 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">
-                        Minggu Ini
-                    </button>
-                    <button @click="setBulanIni()"
-                            class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-purple-100 dark:hover:bg-purple-950/40 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">
-                        Bulan Ini
-                    </button>
-                    <button @click="setTahunAjaran()"
-                            class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-purple-100 dark:hover:bg-purple-950/40 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">
-                        Tahun Ajaran Ini
-                    </button>
+                    <button @click="setMingguIni()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-purple-100 dark:hover:bg-purple-950/40 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">Minggu Ini</button>
+                    <button @click="setBulanIni()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-purple-100 dark:hover:bg-purple-950/40 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">Bulan Ini</button>
+                    <button @click="setTahunAjaran()" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-purple-100 dark:hover:bg-purple-950/40 hover:text-purple-700 dark:hover:text-purple-300 transition-colors">Tahun Ajaran Ini</button>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">Dari</label>
-                    <input type="date" x-model="laporanDari"
-                           class="w-full text-xs border border-slate-200 dark:border-zinc-700 rounded-lg px-2.5 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500">
+                    <input type="date" x-model="laporanDari" class="w-full text-xs border border-slate-200 dark:border-zinc-700 rounded-lg px-2.5 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-slate-600 dark:text-zinc-400 mb-1">Sampai</label>
-                    <input type="date" x-model="laporanSampai"
-                           class="w-full text-xs border border-slate-200 dark:border-zinc-700 rounded-lg px-2.5 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500">
+                    <input type="date" x-model="laporanSampai" class="w-full text-xs border border-slate-200 dark:border-zinc-700 rounded-lg px-2.5 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-purple-400 dark:focus:border-purple-500">
                 </div>
             </div>
             <div class="flex gap-3 pt-1">
                 <button type="button" @click="laporanModal = false" class="btn-secondary flex-1 text-sm">Batal</button>
-                <button type="button" @click="buatLaporan()"
-                        :disabled="!laporanDari || !laporanSampai"
+                <button type="button" @click="buatLaporan()" :disabled="!laporanDari || !laporanSampai"
                         class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                     <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Buat Laporan
                 </button>
@@ -300,8 +352,10 @@
         </div>
     </div>
 </div>
+@endif
 
-{{-- Modal --}}
+{{-- Modal Tambah/Edit (admin only) --}}
+@if($isAdmin)
 <div x-show="modal" x-transition.opacity
      x-effect="document.documentElement.style.overflow = modal ? 'hidden' : ''"
      class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
@@ -324,8 +378,7 @@
             <div>
                 <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Guru</label>
                 <select x-model="form.guru_id"
-                        class="w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500"
-                        required>
+                        class="w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500" required>
                     <option value="">Pilih Guru</option>
                     @foreach($guru as $g)
                     <option value="{{ $g->id }}">{{ $g->nama }}</option>
@@ -336,8 +389,7 @@
             <div>
                 <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Mata Pelajaran</label>
                 <select x-model="form.mapel_id"
-                        class="w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500"
-                        required>
+                        class="w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500" required>
                     <option value="">Pilih Mata Pelajaran</option>
                     @foreach($mapel as $m)
                     <option value="{{ $m->id }}">{{ $m->nama }}</option>
@@ -349,8 +401,7 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Hari</label>
                     <select x-model="form.hari" @change="onHariChange()"
-                            class="no-search w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500"
-                            required>
+                            class="no-search w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500" required>
                         <option value="">Hari</option>
                         @foreach($namaHari as $num => $nama)
                         <option value="{{ $num }}">{{ $nama }}</option>
@@ -393,6 +444,7 @@
         </form>
     </div>
 </div>
+@endif
 
 </div>{{-- end x-data --}}
 @endsection
@@ -400,6 +452,7 @@
 @push('scripts')
 <script>
 function jadwalManager() {
+    @if($isAdmin)
     const defaultForm = {
         guru_id: '', mapel_id: '', hari: '', jam_mulai: '', jam_selesai: '', jam_ke: '', jam_pelajaran_id: '',
         kelas_id: '', tahun_ajaran_id: ''
@@ -407,14 +460,17 @@ function jadwalManager() {
     const allJamSlots = @json($jamPelajaran ?? collect());
     const guruMap     = @json($guru->keyBy('id')->map(fn($g) => ['nama' => $g->nama]));
     const mapelMap    = @json($mapel->keyBy('id')->map(fn($m) => ['nama' => $m->nama]));
+    @endif
     const namaHariMap = @json($namaHari);
     const hariIni     = {{ $hariIni }};
 
     return {
+        @if($isAdmin)
         modal: false, mode: 'create', loading: false, errorMsg: '', warningMsg: '', errors: {},
         form: { ...defaultForm }, editId: null,
         successCount: 0,
         jamSlots: [],
+        @endif
 
         laporanModal: false,
         laporanKelasId: null,
@@ -422,8 +478,10 @@ function jadwalManager() {
         laporanSampai: '',
 
         init() {
+            @if($isAdmin)
             window._jadwalOpenEdit = (item) => this.openEdit(item);
             window._jadwalDelete   = (id, nama) => this.deleteJadwal(id, nama);
+            @endif
         },
 
         openLaporan(kelasId) {
@@ -439,7 +497,7 @@ function jadwalManager() {
             mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
             const sat = new Date(mon);
             sat.setDate(mon.getDate() + 5);
-            this.laporanDari  = mon.toISOString().split('T')[0];
+            this.laporanDari   = mon.toISOString().split('T')[0];
             this.laporanSampai = sat.toISOString().split('T')[0];
         },
 
@@ -448,7 +506,7 @@ function jadwalManager() {
             const y = today.getFullYear();
             const m = String(today.getMonth() + 1).padStart(2, '0');
             const last = new Date(y, today.getMonth() + 1, 0).getDate();
-            this.laporanDari  = `${y}-${m}-01`;
+            this.laporanDari   = `${y}-${m}-01`;
             this.laporanSampai = `${y}-${m}-${String(last).padStart(2, '0')}`;
         },
 
@@ -456,7 +514,7 @@ function jadwalManager() {
             const nama = '{{ $tahunAktif?->nama ?? "" }}';
             if (!nama || !nama.includes('/')) return;
             const [y1, y2] = nama.split('/').map(s => s.trim());
-            this.laporanDari  = `${y1}-07-01`;
+            this.laporanDari   = `${y1}-07-01`;
             this.laporanSampai = `${y2}-06-30`;
         },
 
@@ -467,30 +525,34 @@ function jadwalManager() {
                 tanggal_sampai: this.laporanSampai,
                 @if($tahunId) tahun_ajaran_id: '{{ $tahunId }}', @endif
             });
+            @if($isAdmin)
             window.open(`/admin/jadwal/print/laporan-jurnal/${this.laporanKelasId}?` + params.toString(), '_blank');
+            @else
+            window.open(`/guru/jadwal/print/laporan-jurnal-kelas/${this.laporanKelasId}?` + params.toString(), '_blank');
+            @endif
             this.laporanModal = false;
         },
 
+        @if($isAdmin)
         onHariChange() {
             const hariNum  = parseInt(this.form.hari);
             this.jamSlots  = allJamSlots.filter(s => s.hari === hariNum);
-            this.form.jam_ke     = '';
-            this.form.jam_mulai  = '';
+            this.form.jam_ke      = '';
+            this.form.jam_mulai   = '';
             this.form.jam_selesai = '';
         },
 
-                onJamKeChange() {
+        onJamKeChange() {
             const slot = this.jamSlots.find(s => String(s.jam_ke) === String(this.form.jam_ke));
             if (slot) {
-                this.form.jam_mulai   = (slot.jam_mulai   || '').substring(0, 5);
-                this.form.jam_selesai = (slot.jam_selesai || '').substring(0, 5);
+                this.form.jam_mulai        = (slot.jam_mulai   || '').substring(0, 5);
+                this.form.jam_selesai      = (slot.jam_selesai || '').substring(0, 5);
                 this.form.jam_pelajaran_id = String(slot.id);
             } else {
-                this.form.jam_mulai   = '';
-                this.form.jam_selesai = '';
+                this.form.jam_mulai        = '';
+                this.form.jam_selesai      = '';
                 this.form.jam_pelajaran_id = '';
             }
-        },
         },
 
         openCreate(kelasId, tahunAjaranId) {
@@ -523,15 +585,15 @@ function jadwalManager() {
                 s.jam_mulai.substring(0, 5) === (item.jam_pelajaran?.jam_mulai || '').substring(0, 5)
             );
             this.form = {
-                guru_id:         String(item.guru_id),
-                mapel_id:        String(item.mapel_id),
-                hari:            String(item.jam_pelajaran?.hari),
-                jam_ke:          slot ? String(slot.jam_ke) : '',
+                guru_id:          String(item.guru_id),
+                mapel_id:         String(item.mapel_id),
+                hari:             String(item.jam_pelajaran?.hari),
+                jam_ke:           slot ? String(slot.jam_ke) : '',
                 jam_pelajaran_id: slot ? String(slot.id) : '',
-                jam_mulai:       (item.jam_pelajaran?.jam_mulai  || '').substring(0, 5),
-                jam_selesai:     (item.jam_pelajaran?.jam_selesai || '').substring(0, 5),
-                kelas_id:        String(item.kelas_id),
-                tahun_ajaran_id: String(item.tahun_ajaran_id),
+                jam_mulai:        (item.jam_pelajaran?.jam_mulai  || '').substring(0, 5),
+                jam_selesai:      (item.jam_pelajaran?.jam_selesai || '').substring(0, 5),
+                kelas_id:         String(item.kelas_id),
+                tahun_ajaran_id:  String(item.tahun_ajaran_id),
             };
             this.errors   = {};
             this.errorMsg = '';
@@ -572,13 +634,7 @@ function jadwalManager() {
                 if (!res.ok) {
                     if (data.errors && data.errors.conflict) {
                         const msg = Array.isArray(data.errors.conflict) ? data.errors.conflict.join('\n') : data.errors.conflict[0];
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Bentrokan Jadwal',
-                            text: msg,
-                            confirmButtonText: 'Tutup',
-                            confirmButtonColor: '#ef4444'
-                        });
+                        Swal.fire({ icon: 'warning', title: 'Bentrokan Jadwal', text: msg, confirmButtonText: 'Tutup', confirmButtonColor: '#ef4444' });
                         return;
                     }
                     if (data.errors) {
@@ -593,8 +649,6 @@ function jadwalManager() {
                 if (this.mode === 'create') {
                     this.successCount++;
                     this.insertJadwalCard(jadwal, data.warnings || []);
-
-                    // Reset form sebagian, modal tetap terbuka
                     const prevHari  = this.form.hari;
                     const prevGuru  = this.form.guru_id;
                     const prevMapel = this.form.mapel_id;
@@ -607,14 +661,12 @@ function jadwalManager() {
                         mapel_id: prevMapel,
                         hari:     prevHari,
                     };
-                    // Auto-increment ke jam berikutnya
                     const nextSlot = this.jamSlots.find(s => s.jam_ke === prevJamKe + 1);
                     if (nextSlot) {
-                        this.form.jam_ke     = String(nextSlot.jam_ke);
-                        this.form.jam_mulai  = nextSlot.jam_mulai.substring(0, 5);
+                        this.form.jam_ke      = String(nextSlot.jam_ke);
+                        this.form.jam_mulai   = nextSlot.jam_mulai.substring(0, 5);
                         this.form.jam_selesai = nextSlot.jam_selesai.substring(0, 5);
                     }
-
                     this.warningMsg = data.warnings?.length > 0 ? data.warnings.join(' | ') : '';
                     Swal.fire({ icon: 'success', title: `Jadwal ke-${this.successCount} ditambahkan!`, text: data.message, timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
                 } else {
@@ -631,7 +683,7 @@ function jadwalManager() {
         },
 
         insertJadwalCard(jadwal, warnings) {
-            const hariNum  = parseInt(jadwal.jam_pelajaran?.hari);
+            const hariNum   = parseInt(jadwal.jam_pelajaran?.hari);
             const isBentrok = warnings.length > 0;
             const jamMulai  = (jadwal.jam_pelajaran?.jam_mulai  || '').substring(0, 5);
             const jamSelesai = (jadwal.jam_pelajaran?.jam_selesai || '').substring(0, 5);
@@ -644,9 +696,7 @@ function jadwalManager() {
                 : (isHariIni
                     ? 'bg-white dark:bg-zinc-800/60 border border-amber-100 dark:border-amber-900/30'
                     : 'bg-slate-50 dark:bg-zinc-800/40');
-            const timeColor = isBentrok
-                ? 'text-orange-600 dark:text-orange-400'
-                : 'text-amber-600 dark:text-amber-400';
+            const timeColor = isBentrok ? 'text-orange-600 dark:text-orange-400' : 'text-amber-600 dark:text-amber-400';
             const bentrokBadge = isBentrok
                 ? `<span class="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400"><i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i> Bentrok</span>`
                 : '';
@@ -689,7 +739,6 @@ function jadwalManager() {
             template.innerHTML = cardHTML.trim();
             const el = template.content.firstChild;
 
-            // Insert sorted by jam_mulai
             const existingCards = [...listContainer.querySelectorAll('[data-jadwal-id]')];
             let inserted = false;
             for (const card of existingCards) {
@@ -701,7 +750,6 @@ function jadwalManager() {
             if (typeof lucide !== 'undefined') lucide.createIcons();
             this._updateJadwalCount(1);
 
-            // Highlight animasi
             setTimeout(() => {
                 const newCard = listContainer.querySelector(`[data-jadwal-id="${jadwal.id}"]`);
                 if (newCard) {
@@ -718,12 +766,7 @@ function jadwalManager() {
 
             const oldHari = parseInt(existingCard.closest('[data-hari]')?.dataset?.hari);
             const newHari = parseInt(jadwal.jam_pelajaran?.hari);
-
-            if (oldHari !== newHari) {
-                existingCard.remove();
-                this.insertJadwalCard(jadwal, warnings);
-                return;
-            }
+            if (oldHari !== newHari) { existingCard.remove(); this.insertJadwalCard(jadwal, warnings); return; }
 
             const jamMulai   = (jadwal.jam_pelajaran?.jam_mulai  || '').substring(0, 5);
             const jamSelesai = (jadwal.jam_pelajaran?.jam_selesai || '').substring(0, 5);
@@ -733,13 +776,11 @@ function jadwalManager() {
             const monoEls = existingCard.querySelectorAll('.font-mono');
             if (monoEls[0]) monoEls[0].textContent = jamMulai;
             if (monoEls[1]) monoEls[1].textContent = jamSelesai;
-
             const mapelEl = existingCard.querySelector('.text-sm.font-semibold');
             if (mapelEl) mapelEl.textContent = mapelNama;
             const guruEl = existingCard.querySelector('.text-xs.text-slate-400');
             if (guruEl) guruEl.innerHTML = `<i data-lucide="user" class="w-3 h-3 flex-shrink-0"></i> ${guruNama}`;
 
-            // Re-bind buttons
             const btns = existingCard.querySelectorAll('button');
             if (btns[0]) btns[0].setAttribute('onclick', `_jadwalOpenEdit(${JSON.stringify(jadwal).replace(/"/g, '&quot;')})`);
             if (btns[1]) btns[1].setAttribute('onclick', `_jadwalDelete(${jadwal.id}, '${mapelNama.replace(/'/g, "\\'")}')`);
@@ -778,14 +819,10 @@ function jadwalManager() {
         _createHariSection(hariNum, isHariIni, hariNama) {
             const bgClass   = isHariIni ? 'bg-amber-50/60 dark:bg-amber-950/10' : '';
             const textClass = isHariIni ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-zinc-500';
-            const hariIniTag = isHariIni
-                ? `<span class="badge bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 text-[10px]"><i data-lucide="sun" class="w-2.5 h-2.5"></i> Hari ini</span>`
-                : '';
             const html = `
                 <div data-hari="${hariNum}" class="${bgClass}">
                     <div class="flex items-center gap-3 px-5 py-2.5">
                         <span class="text-xs font-bold uppercase tracking-wide w-14 flex-shrink-0 ${textClass}">${hariNama}</span>
-                        ${hariIniTag}
                     </div>
                     <div class="pb-2 space-y-1.5 px-5"></div>
                 </div>`;
@@ -809,6 +846,7 @@ function jadwalManager() {
             const match = el.textContent.match(/(\d+)/);
             if (match) el.textContent = `${parseInt(match[1]) + delta} jadwal terdaftar`;
         },
+        @endif
     };
 }
 </script>
