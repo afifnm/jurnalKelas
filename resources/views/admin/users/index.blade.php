@@ -64,7 +64,7 @@
                 <div class="flex items-center justify-between gap-3 mb-2">
                     <div class="flex items-center gap-3 flex-1 min-w-0">
                         <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                            {{ strtoupper(substr($user->nama, 0, 1)) }}
+                            {{ $user->username }}
                         </div>
                         <div class="min-w-0">
                             <p class="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate">{{ $user->nama }}</p>
@@ -150,7 +150,7 @@
                         <td class="px-4 py-3.5">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                                    {{ strtoupper(substr($user->nama, 0, 1)) }}
+                                    {{ $user->username }}
                                 </div>
                                 <div>
                                     <p class="font-semibold text-slate-700 dark:text-slate-200">{{ $user->nama }}</p>

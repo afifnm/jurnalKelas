@@ -154,6 +154,11 @@ td.td-jadwal {
 }
 td.td-jadwal.has-jadwal { background: #fefce8; }
 
+/* Istirahat row */
+tr.tr-istirahat td { background: #f0f9ff !important; color: #0369a1; font-style: italic; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+tr.tr-istirahat td.td-jam { color: #0284c7; }
+tr.tr-istirahat td.td-istirahat-label { font-size: 6pt; color: #0369a1; text-align: center; letter-spacing: .3px; }
+
 .cell-kode {
   display: block;
   font-weight: 700;
@@ -280,24 +285,33 @@ tr.hari-separator td { border-top: 1.2pt solid #334155 !important; }
         </thead>
         <tbody>
           @foreach($namaHari as $hariNum => $hariNama)
-            @if($jadwalByHari->has($hariNum))
+            @php
+              $slotsHariIni = ($jamPelajaran->get($hariNum) ?? collect())->sortBy('jam_mulai');
+              if ($slotsHariIni->isEmpty()) continue;
+
+              // Count total rows for rowspan (all slots)
+              $rowCount  = $slotsHariIni->count();
+              $firstSlot = true;
+            @endphp
+            @foreach($slotsHariIni as $slot)
               @php
-                $slots       = $jadwalByHari[$hariNum];
-                $slotCount   = $slots->count();
-                $firstSlot   = true;
+                $jamMulai  = substr($slot->jam_mulai, 0, 5);
+                $jamSelesai = substr($slot->jam_selesai, 0, 5);
+                $slotJadwal = $jadwalByHari->get($hariNum, collect())->get($slot->jam_mulai . '|' . $slot->jam_selesai, collect());
               @endphp
-              @foreach($slots as $slotKey => $byKelas)
-                @php [$jamMulai, $jamSelesai] = explode('|', $slotKey); @endphp
-                <tr class="{{ $firstSlot ? 'hari-separator' : '' }}">
-                  @if($firstSlot)
-                  <td class="td-hari" rowspan="{{ $slotCount }}">{{ $hariNama }}</td>
-                  @php $firstSlot = false; @endphp
-                  @endif
+              <tr class="{{ $firstSlot ? 'hari-separator' : '' }} {{ $slot->is_istirahat ? 'tr-istirahat' : '' }}">
+                @if($firstSlot)
+                <td class="td-hari" rowspan="{{ $rowCount }}">{{ $hariNama }}</td>
+                @php $firstSlot = false; @endphp
+                @endif
 
-                  <td class="td-jam">{{ substr($jamMulai,0,5) }}&ndash;{{ substr($jamSelesai,0,5) }}</td>
+                <td class="td-jam">{{ $jamMulai }}&ndash;{{ $jamSelesai }}</td>
 
+                @if($slot->is_istirahat)
+                  <td class="td-istirahat-label" colspan="{{ $kelasList->count() }}">— Istirahat —</td>
+                @else
                   @foreach($kelasList as $kelas)
-                    @php $j = $byKelas->get($kelas->id); @endphp
+                    @php $j = $slotJadwal->get($kelas->id); @endphp
                     <td class="td-jadwal {{ $j ? 'has-jadwal' : '' }}">
                       @if($j)
                         <span class="cell-kode">{{ $j->mapel->kode ?? $j->mapel->nama }}</span>
@@ -305,9 +319,9 @@ tr.hari-separator td { border-top: 1.2pt solid #334155 !important; }
                       @endif
                     </td>
                   @endforeach
-                </tr>
-              @endforeach
-            @endif
+                @endif
+              </tr>
+            @endforeach
           @endforeach
         </tbody>
       </table>

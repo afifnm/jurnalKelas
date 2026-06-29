@@ -31,7 +31,7 @@ class JurnalController extends Controller
             ->where('guru_id', $guru->id)
             ->where('jam_pelajaran.hari', $hariIni)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get();
 
         $jurnalHariIni = Jurnal::where('guru_id', $guru->id)
@@ -40,33 +40,19 @@ class JurnalController extends Controller
 
         $sudahDiisiHariIni = $jurnalHariIni->pluck('jadwal_id')->toArray();
 
-        $selectedJadwal    = null;
-        $selectedJamKeluar = '';
+        $selectedJadwal = null;
         if ($request->filled('jadwal_id')) {
             $selectedJadwal = $jadwalHariIni->firstWhere('id', $request->jadwal_id);
         }
 
         $grupJadwalHariIni = Jadwal::grupkanBerurutan($jadwalHariIni);
 
-        if ($selectedJadwal) {
-            foreach ($grupJadwalHariIni as $grup) {
-                if (in_array($selectedJadwal->id, $grup['ids'])) {
-                    $selectedJamKeluar = substr($grup['jadwal']->last()->jamPelajaran->jam_selesai, 0, 5);
-                    break;
-                }
-            }
-        }
-
         $autoFilledJadwal = null;
-        $autoJamMasuk     = '';
-        $autoJamKeluar    = '';
 
         if (! $selectedJadwal) {
-            $now         = now();
-            $currentTime = $now->format('H:i:s');
+            $currentTime = now()->format('H:i:s');
 
             foreach ($grupJadwalHariIni as $grup) {
-                // Skip grup yang sudah ada jurnalnya
                 if (count(array_intersect($grup['ids'], $sudahDiisiHariIni)) > 0) continue;
 
                 $firstJadwal = $grup['jadwal']->first();
@@ -80,10 +66,6 @@ class JurnalController extends Controller
 
                 if ($currentTime >= $windowMulai && $currentTime <= $windowAkhir) {
                     $autoFilledJadwal = $firstJadwal;
-                    $autoJamMasuk  = $currentTime >= $firstJadwal->jamPelajaran->jam_mulai
-                        ? $now->format('H:i')
-                        : $jamMulai->format('H:i');
-                    $autoJamKeluar = $jamSelesai->format('H:i');
                     break;
                 }
             }
@@ -99,7 +81,7 @@ class JurnalController extends Controller
 
         return view('guru.jurnal.create', compact(
             'jadwalHariIni', 'sudahDiisiHariIni', 'jurnalHariIni', 'grupJadwalHariIni',
-            'selectedJadwal', 'selectedJamKeluar', 'autoFilledJadwal', 'autoJamMasuk', 'autoJamKeluar',
+            'selectedJadwal', 'autoFilledJadwal',
             'kelas', 'mapel'
         ));
     }
@@ -115,12 +97,11 @@ class JurnalController extends Controller
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->get();
 
-        $jurnal->load(['lampiran', 'kelas', 'mapel']);
+        $jurnal->load(['lampiran', 'kelas', 'mapel', 'jadwal.jamPelajaran']);
 
         $kelas = $jadwalGuru->pluck('kelas')->unique('id')->sortBy('nama')->values();
         $mapel = $jadwalGuru->pluck('mapel')->unique('id')->sortBy('nama')->values();
 
-        // Pastikan kelas/mapel jurnal ini tetap tampil meski sudah tidak di jadwal aktif
         if ($jurnal->kelas && $kelas->where('id', $jurnal->kelas_id)->isEmpty()) {
             $kelas->push($jurnal->kelas);
         }
@@ -128,34 +109,45 @@ class JurnalController extends Controller
             $mapel->push($jurnal->mapel);
         }
 
-        return view('guru.jurnal.edit', compact('jurnal', 'kelas', 'mapel'));
+        $jamSesiMap = Jurnal::buildJamSesiMap(collect([$jurnal]));
+        $jamSesi    = $jamSesiMap[$jurnal->id] ?? null;
+
+        return view('guru.jurnal.edit', compact('jurnal', 'kelas', 'mapel', 'jamSesi'));
     }
 
     public function index(Request $request): View
     {
         $guru = auth()->user();
+        $tahunAktif = TahunAjaran::aktif();
 
-        $query = Jurnal::with(['kelas', 'mapel', 'lampiran'])
+        $query = Jurnal::with(['guru', 'kelas', 'mapel', 'lampiran', 'jadwal.jamPelajaran'])
             ->where('guru_id', $guru->id);
 
-        if ($request->filled('bulan')) {
-            $query->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [$request->bulan]);
+        $periode = $request->input('periode');
+        if ($periode === 'hari_ini') {
+            $query->whereDate('tanggal', today());
+        } elseif ($periode === 'minggu_ini') {
+            $query->whereBetween('tanggal', [now()->startOfWeek(), now()->endOfWeek()]);
+        } elseif ($periode === 'bulan_ini') {
+            $query->whereMonth('tanggal', now()->month)->whereYear('tanggal', now()->year);
+        } elseif ($request->filled('tanggal_dari') || $request->filled('tanggal_sampai')) {
+            if ($request->filled('tanggal_dari')) $query->whereDate('tanggal', '>=', $request->tanggal_dari);
+            if ($request->filled('tanggal_sampai')) $query->whereDate('tanggal', '<=', $request->tanggal_sampai);
         }
         if ($request->filled('kelas_id')) {
             $query->where('kelas_id', $request->kelas_id);
         }
 
-        $jurnal = $query->latest('tanggal')->paginate(15)->withQueryString();
+        $jurnal = $query->latest('tanggal')->paginate(20)->withQueryString();
 
         $hariIni = now()->dayOfWeekIso;
-        $tahunAktif = TahunAjaran::aktif();
         $jadwalHariIni = Jadwal::select('jadwal.*')
             ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
             ->with(['kelas', 'mapel', 'jamPelajaran'])
             ->where('guru_id', $guru->id)
             ->where('jam_pelajaran.hari', $hariIni)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get();
 
         $sudahDiisiHariIni = Jurnal::where('guru_id', $guru->id)
@@ -170,12 +162,26 @@ class JurnalController extends Controller
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->get();
 
-        $kelas = $jadwalGuru->pluck('kelas')->unique('id')->sortBy('nama')->values();
-        $mapel = $jadwalGuru->pluck('mapel')->unique('id')->sortBy('nama')->values();
+        $kelas    = $jadwalGuru->pluck('kelas')->unique('id')->sortBy('nama')->values();
+        $jamSesiMap = Jurnal::buildJamSesiMap($jurnal);
 
-        return view('guru.jurnal.index', compact(
-            'jurnal', 'jadwalHariIni', 'sudahDiisiHariIni', 'grupJadwalHariIni', 'kelas', 'mapel', 'tahunAktif'
-        ));
+        return view('guru.jurnal.index', [
+            'jurnal'            => $jurnal,
+            'jamSesiMap'        => $jamSesiMap,
+            'jadwalHariIni'     => $jadwalHariIni,
+            'sudahDiisiHariIni' => $sudahDiisiHariIni,
+            'grupJadwalHariIni' => $grupJadwalHariIni,
+            'kelas'             => $kelas,
+            'guru'              => collect(),
+            'tahunAktif'        => $tahunAktif,
+            'canCreate'         => true,
+            'canEdit'           => true,
+            'breadcrumbRole'    => 'Guru',
+            'headerDesc'        => 'Riwayat dan pengisian jurnal harian',
+            'indexRoute'        => route('guru.jurnal.index'),
+            'showRouteBase'     => '/guru/jurnal',
+            'showRouteSuffix'   => '/show',
+        ]);
     }
 
     public function store(StoreJurnalRequest $request): JsonResponse|RedirectResponse
@@ -185,37 +191,15 @@ class JurnalController extends Controller
 
         DB::beginTransaction();
         try {
-            $jadwal = null;
-            if ($request->filled('jadwal_id')) {
-                $jadwal = Jadwal::find($request->jadwal_id);
-            }
-
-            $isTerlambat = false;
-            $menitTerlambat = 0;
-
-            if ($jadwal && $request->filled('jam_masuk_aktual')) {
-                $jamMulai = strtotime($jadwal->jamPelajaran->jam_mulai);
-                $jamMasuk = strtotime($request->jam_masuk_aktual);
-                $selisih  = ($jamMasuk - $jamMulai) / 60;
-                if ($selisih > 0) {
-                    $isTerlambat    = true;
-                    $menitTerlambat = (int) $selisih;
-                }
-            }
-
             $jurnal = Jurnal::create([
-                'jadwal_id'         => $request->jadwal_id,
-                'guru_id'           => $guru->id,
-                'kelas_id'          => $request->kelas_id,
-                'mapel_id'          => $request->mapel_id,
-                'tahun_ajaran_id'   => $tahunAktif?->id,
-                'tanggal'           => $request->tanggal,
-                'jam_masuk_aktual'  => $request->jam_masuk_aktual,
-                'jam_keluar_aktual' => $request->jam_keluar_aktual,
-                'materi'            => $request->materi,
-                'catatan'           => $request->catatan,
-                'is_terlambat'      => $isTerlambat,
-                'menit_terlambat'   => $menitTerlambat,
+                'jadwal_id'       => $request->jadwal_id,
+                'guru_id'         => $guru->id,
+                'kelas_id'        => $request->kelas_id,
+                'mapel_id'        => $request->mapel_id,
+                'tahun_ajaran_id' => $tahunAktif?->id,
+                'tanggal'         => $request->tanggal,
+                'materi'          => $request->materi,
+                'catatan'         => $request->catatan,
             ]);
 
             $this->processLampiran($request, $jurnal->id);
@@ -236,38 +220,21 @@ class JurnalController extends Controller
     public function show(Jurnal $jurnal): JsonResponse
     {
         $this->authorize('view', $jurnal);
-        return response()->json($jurnal->load(['kelas', 'mapel', 'jadwal', 'lampiran']));
+        $jurnal->load(['guru', 'kelas', 'mapel', 'jadwal.jamPelajaran', 'lampiran']);
+        $sesi = Jurnal::buildJamSesiMap(collect([$jurnal]));
+        $data = $jurnal->toArray();
+        $data['jam_sesi'] = $sesi[$jurnal->id] ?? null;
+        $data['dalam_jam'] = $jurnal->isInputDalamJamMengajar();
+        return response()->json($data);
     }
 
     public function update(UpdateJurnalRequest $request, Jurnal $jurnal): JsonResponse|RedirectResponse
     {
-        $jadwal = $jurnal->jadwal;
-
-        $isTerlambat = false;
-        $menitTerlambat = 0;
-
-        if ($jadwal && $request->filled('jam_masuk_aktual')) {
-            $jamMulai = strtotime($jadwal->jamPelajaran->jam_mulai);
-            $jamMasuk = strtotime($request->jam_masuk_aktual);
-            $selisih  = ($jamMasuk - $jamMulai) / 60;
-            if ($selisih > 0) {
-                $isTerlambat    = true;
-                $menitTerlambat = (int) $selisih;
-            }
-        }
-
         DB::beginTransaction();
         try {
             $jurnal->update([
-                'kelas_id'          => $request->kelas_id,
-                'mapel_id'          => $request->mapel_id,
-                'tanggal'           => $request->tanggal,
-                'jam_masuk_aktual'  => $request->jam_masuk_aktual,
-                'jam_keluar_aktual' => $request->jam_keluar_aktual,
-                'materi'            => $request->materi,
-                'catatan'           => $request->catatan,
-                'is_terlambat'      => $isTerlambat,
-                'menit_terlambat'   => $menitTerlambat,
+                'materi'  => $request->materi,
+                'catatan' => $request->catatan,
             ]);
 
             $this->processLampiran($request, $jurnal->id);
@@ -310,8 +277,8 @@ class JurnalController extends Controller
             $path = 'lampiran/' . date('Y/m') . '/' . uniqid() . '.webp';
 
             $img = Image::read($file)
-                ->scaleDown(1200, 1200)
-                ->toWebp(85);
+                ->scaleDown(800, 800)
+                ->toWebp(60);
 
             Storage::disk('local')->put($path, $img);
 

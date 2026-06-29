@@ -195,7 +195,7 @@
             <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100 dark:border-zinc-700/50">
                 <div class="flex items-center gap-3 min-w-0">
                     <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 text-sm font-bold flex-shrink-0">
-                        {{ strtoupper(substr($guruAktif?->nama ?? '?', 0, 1)) }}
+                        {{ $guruAktif?->username ?? '?' }}
                     </div>
                     <div class="min-w-0">
                         <h3 class="font-bold text-slate-800 dark:text-white truncate">{{ $guruAktif?->nama }}</h3>
@@ -204,8 +204,8 @@
                 </div>
                 <div class="flex items-center gap-1.5 flex-shrink-0">
                     @if($guruAktif)
-                    {{-- Laporan Jurnal (admin & guru) --}}
-                    @if($isAdmin || $isGuru)
+                    {{-- Laporan Jurnal (admin, guru & ks) --}}
+                    @if($isAdmin || $isGuru || $isKs)
                     <button @click="openLaporan({{ $guruAktif->id }})"
                             class="btn-secondary text-xs py-1.5 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/30">
                         <i data-lucide="file-bar-chart-2" class="w-3.5 h-3.5"></i>
@@ -259,6 +259,12 @@
             </div>
             @else
             <div id="jadwal-list-container" class="divide-y divide-slate-100 dark:divide-zinc-700/50">
+                @php
+                    $jamIstirahatPerHari = ($jamPelajaran ?? collect())
+                        ->where('is_istirahat', true)
+                        ->groupBy('hari')
+                        ->map(fn($items) => $items->sortBy('jam_ke')->values());
+                @endphp
                 @foreach($namaHari as $hariNum => $hariNama)
                 @php $jadwalHari = $jadwalGrouped->get($hariNum, collect()); @endphp
                 @if($jadwalHari->isNotEmpty())
@@ -272,8 +278,10 @@
                     <div class="pb-2 space-y-1.5 px-5">
                         @php
                             $grups = $hariNum == $hariIni && $isGuru
-                                ? ($jadwalPerGuru[$guruId]['grupHariIni'] ?? \App\Models\Jadwal::grupkanBerurutan($jadwalHari->sortBy(fn($j) => $j->jamPelajaran->jam_ke)))
-                                : \App\Models\Jadwal::grupkanBerurutan($jadwalHari->sortBy(fn($j) => $j->jamPelajaran->jam_ke));
+                                ? ($jadwalPerGuru[$guruId]['grupHariIni'] ?? \App\Models\Jadwal::grupkanBerurutan($jadwalHari->sortBy(fn($j) => $j->jamPelajaran?->jam_mulai)))
+                                : \App\Models\Jadwal::grupkanBerurutan($jadwalHari->sortBy(fn($j) => $j->jamPelajaran?->jam_mulai));
+                            $istirahatHari = $jamIstirahatPerHari->get($hariNum, collect());
+                            $prevLastKe = null;
                         @endphp
                         @foreach($grups as $grup)
                         @php
@@ -291,7 +299,25 @@
                             $sudah = $isGuru && $hariNum == $hariIni
                                 && isset($sudahDiisiHariIni)
                                 && count(array_intersect($grup['ids'], $sudahDiisiHariIni)) > 0;
+
+                            // Istirahat antara grup sebelumnya dan grup ini
+                            $istirahatSebelum = $prevLastKe !== null
+                                ? $istirahatHari->filter(fn($ist) => $ist->jam_ke > $prevLastKe && $ist->jam_ke < $j->jamPelajaran->jam_ke)
+                                : collect();
+                            $prevLastKe = $jLast->jamPelajaran->jam_ke;
                         @endphp
+                        @foreach($istirahatSebelum as $ist)
+                        <div class="flex items-center gap-3 px-1 py-1">
+                            <div class="text-center w-20 flex-shrink-0">
+                                <p class="text-[10px] font-mono text-slate-400 dark:text-zinc-500">{{ substr($ist->jam_mulai, 0, 5) }}</p>
+                                <p class="text-[10px] font-mono text-slate-400 dark:text-zinc-500">{{ substr($ist->jam_selesai, 0, 5) }}</p>
+                            </div>
+                            <div class="w-px h-5 bg-slate-200 dark:bg-zinc-700 flex-shrink-0"></div>
+                            <div class="flex-1 flex items-center gap-1.5">
+                                <span class="text-[10px] font-medium text-slate-400 dark:text-zinc-500 italic">Istirahat</span>
+                            </div>
+                        </div>
+                        @endforeach
                         <div data-jadwal-id="{{ $j->id }}" class="flex items-center gap-3 p-3 rounded-xl
                             {{ $isBentrok
                                 ? 'bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/40'
@@ -327,7 +353,9 @@
                                 </div>
                                 <p class="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1">
                                     <i data-lucide="school" class="w-3 h-3 flex-shrink-0"></i>
-                                    Kelas {{ $j->kelas->nama }}
+                                    <a href="{{ route($routeByKelas, ['kelas_id' => $j->kelas->id]) }}" class="hover:underline hover:text-blue-600">
+                                        Kelas {{ $j->kelas->nama }}
+                                    </a>
                                 </p>
                             </div>
                             {{-- Tombol aksi --}}
@@ -370,8 +398,8 @@
 </div>
 @endif
 
-{{-- Laporan Jurnal Modal (admin & guru) --}}
-@if($isAdmin || $isGuru)
+{{-- Laporan Jurnal Modal (admin, guru & ks) --}}
+@if($isAdmin || $isGuru || $isKs)
 <div x-show="laporanModal" x-transition.opacity
      x-effect="document.documentElement.style.overflow = laporanModal ? 'hidden' : ''"
      class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
@@ -521,7 +549,7 @@ function jadwalManager() {
         guru_id: '', kelas_id: '', mapel_id: '', hari: '', jam_mulai: '', jam_selesai: '', jam_ke: '',
         tahun_ajaran_id: ''
     };
-    const allJamSlots = @json($jamPelajaran ?? collect());
+    const allJamSlots = (@json($jamPelajaran ?? collect())).filter(s => !s.is_istirahat);
     const kelasMap    = @json($kelas->keyBy('id')->map(fn($k) => ['nama' => $k->nama]));
     const mapelMap    = @json($mapel->keyBy('id')->map(fn($m) => ['nama' => $m->nama]));
     @endif
@@ -591,8 +619,10 @@ function jadwalManager() {
             });
             @if($isAdmin)
             window.open(`/admin/jadwal/print/laporan-jurnal-guru/${this.laporanGuruId}?` + params.toString(), '_blank');
-            @else
+            @elseif($isGuru)
             window.open(`/guru/jadwal/print/laporan-jurnal-guru/${this.laporanGuruId}?` + params.toString(), '_blank');
+            @else
+            window.open(`/ks/jadwal/print/laporan-jurnal-guru/${this.laporanGuruId}?` + params.toString(), '_blank');
             @endif
             this.laporanModal = false;
         },

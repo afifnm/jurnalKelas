@@ -10,15 +10,43 @@
 
 {{-- Alert belum isi --}}
 @if($belumDiisi->isNotEmpty())
-<div class="mb-5 flex items-start gap-3 px-4 py-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-xl">
-    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
-    <div class="flex-1 min-w-0">
-        <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Ada {{ $belumDiisi->count() }} jadwal hari ini yang belum diisi!</p>
-        <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Segera isi jurnal mengajar Anda.</p>
+<div class="mb-6 rounded-2xl border-4 border-red-500 bg-red-50 dark:bg-red-950/40 overflow-hidden shadow-lg">
+    <div class="flex items-center gap-3 px-5 py-4 bg-red-500 text-white">
+        <i data-lucide="alert-triangle" class="w-8 h-8 animate-pulse"></i>
+        <p class="text-lg md:text-xl font-bold">PERHATIAN: Anda Belum Mengisi Jurnal Hari Ini!</p>
     </div>
-    <a href="{{ route('guru.jurnal.create') }}" class="btn-primary text-xs py-1.5 flex-shrink-0">
-        <i data-lucide="notebook-pen" class="w-3.5 h-3.5"></i> Isi Sekarang
-    </a>
+    <div class="px-5 py-4">
+        <p class="text-base md:text-lg text-red-800 dark:text-red-300 mb-4 font-medium">
+            Ada <strong>{{ $belumDiisi->count() }} kelas</strong> yang sudah Anda ajar tapi belum dicatat di jurnal:
+        </p>
+        <ul class="mb-5 space-y-3">
+            @foreach($belumDiisi->take(3) as $grup)
+            @php $first = $grup['jadwal']->first(); $last = $grup['jadwal']->last(); @endphp
+            <li class="text-sm md:text-base font-semibold text-red-800 dark:text-red-300 flex flex-col md:flex-row md:items-center gap-2 bg-red-100 dark:bg-red-900/50 p-3 rounded-xl border border-red-200 dark:border-red-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="clock" class="w-5 h-5 flex-shrink-0 text-red-600 dark:text-red-400"></i>
+                    <span class="whitespace-nowrap">{{ substr($first->jamPelajaran->jam_mulai,0,5) }}–{{ substr($last->jamPelajaran->jam_selesai,0,5) }}</span>
+                </div>
+                <div class="flex-1">
+                    <span class="hidden md:inline"> | </span>
+                    {{ $first->mapel->nama }} <span class="hidden md:inline"> | </span>
+                    <span class="block md:inline font-bold">Kelas {{ $first->kelas->nama }}</span>
+                </div>
+                @if($grup['jadwal']->count() > 1)
+                <span class="px-2.5 py-1 bg-red-200 dark:bg-red-800/80 rounded-lg text-xs font-bold whitespace-nowrap self-start md:self-auto">({{ $grup['jadwal']->count() }} Jam)</span>
+                @endif
+            </li>
+            @endforeach
+            @if($belumDiisi->count() > 3)
+            <li class="text-base font-bold text-red-600 dark:text-red-500 text-center p-2">+ {{ $belumDiisi->count() - 3 }} kelas lainnya belum diisi</li>
+            @endif
+        </ul>
+        <a href="{{ route('guru.jurnal.create') }}"
+           class="flex items-center justify-center gap-3 w-full py-4 md:py-5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-lg md:text-xl transition-all active:scale-95 shadow-lg border-b-4 border-red-800">
+            <i data-lucide="pointer" class="w-7 h-7 md:w-8 md:h-8 animate-bounce"></i>
+            👉 KLIK DI SINI UNTUK MENGISI JURNAL SEKARANG 👈
+        </a>
+    </div>
 </div>
 @endif
 
@@ -117,14 +145,20 @@
                         <span class="flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400">{{ $jumlahJam }} JP</span>
                         @endif
                     </div>
-                    <p class="text-xs text-slate-400">{{ $j->kelas->nama }}</p>
+                    <p class="text-xs text-slate-400">
+                        <a href="{{ route('guru.jadwal.by-kelas', ['kelas_id' => $j->kelas->id]) }}" class="hover:underline hover:text-blue-600">
+                            {{ $j->kelas->nama }}
+                        </a>
+                    </p>
                 </div>
                 @if($sudahDiisi)
-                    <span class="badge badge-validated"><i data-lucide="check" class="w-3 h-3"></i> Sudah diisi</span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 text-sm font-bold flex-shrink-0 border border-green-200 dark:border-green-800">
+                        <i data-lucide="check-circle-2" class="w-5 h-5"></i> Sudah Diisi
+                    </span>
                 @else
                     <a href="{{ route('guru.jurnal.create', ['jadwal_id' => $j->id]) }}"
-                       class="badge bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-200 transition-colors text-xs">
-                        <i data-lucide="plus" class="w-3 h-3"></i> Isi
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-zinc-900 font-black text-sm transition-all active:scale-95 flex-shrink-0 shadow-md border-b-2 border-amber-600">
+                        <i data-lucide="pencil" class="w-5 h-5"></i> ISI JURNAL
                     </a>
                 @endif
             </div>
@@ -153,12 +187,14 @@
             <div class="flex items-center gap-3 px-5 py-3">
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{{ $j->mapel->nama }}</p>
-                    <p class="text-xs text-slate-400">{{ $j->kelas->nama }} — {{ $j->tanggal->translatedFormat('l, j F Y') }}</p>
+                    <p class="text-xs text-slate-400">
+                        <a href="{{ route('guru.jadwal.by-kelas', ['kelas_id' => $j->kelas->id]) }}" class="hover:underline hover:text-blue-600">{{ $j->kelas->nama }}</a> — {{ $j->tanggal->translatedFormat('l, j F Y') }}
+                    </p>
                 </div>
-                @if($j->is_terlambat)
-                <span class="text-[10px] text-red-500 dark:text-red-400 font-medium flex-shrink-0">+{{ $j->menit_terlambat }} mnt</span>
+                @if($j->isInputDalamJamMengajar())
+                <span class="text-[10px] text-green-500 dark:text-green-400 font-medium flex-shrink-0">Dalam jam</span>
                 @else
-                <span class="text-[10px] text-green-500 dark:text-green-400 font-medium flex-shrink-0">Tepat waktu</span>
+                <span class="text-[10px] text-red-500 dark:text-red-400 font-medium flex-shrink-0">Di luar jam</span>
                 @endif
             </div>
             @endforeach
@@ -204,12 +240,14 @@
             <div class="flex-1 h-px bg-slate-100 dark:bg-zinc-700/50 ml-1"></div>
         </div>
 
-        {{-- Slot vertikal (per grup) --}}
+        {{-- Slot per grup --}}
         @foreach($grups as $grup)
         @php
             $j         = $grup['jadwal']->first();
             $jLast     = $grup['jadwal']->last();
             $jumlahJam = $grup['jadwal']->count();
+            $sudahIsi  = $hariNum == $hariIni && count(array_intersect($grup['ids'], $sudahDiisiHariIni)) > 0;
+            $belumIsi  = $hariNum == $hariIni && !$sudahIsi;
         @endphp
         <div class="flex items-center gap-3 px-5 py-2.5
             {{ $hariNum == $hariIni ? 'bg-amber-50/60 dark:bg-amber-950/10' : '' }}
@@ -234,12 +272,15 @@
                 <p class="text-xs text-slate-400 dark:text-zinc-500">Kelas {{ $j->kelas->nama }}</p>
             </div>
 
-            {{-- Tombol isi (hari ini saja) --}}
-            @if($hariNum == $hariIni)
-            <a href="{{ route('guru.jurnal.create', ['jadwal_id' => $j->id]) }}"
-               class="flex-shrink-0 w-7 h-7 rounded-lg bg-amber-400 hover:bg-amber-500 flex items-center justify-center transition-colors active:scale-95">
-                <i data-lucide="plus" class="w-4 h-4 text-zinc-900"></i>
-            </a>
+            {{-- Label status (hari ini saja) --}}
+            @if($sudahIsi)
+            <span class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 text-xs font-bold border border-green-200 dark:border-green-800">
+                <i data-lucide="check-circle-2" class="w-4 h-4"></i> Sudah Diisi
+            </span>
+            @elseif($belumIsi)
+            <span class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 text-xs font-bold border border-red-200 dark:border-red-800 animate-pulse">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i> BELUM DIISI
+            </span>
             @endif
 
         </div>

@@ -7,6 +7,7 @@ use App\Models\Jadwal;
 use App\Models\Jurnal;
 use App\Models\TahunAjaran;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -45,10 +46,15 @@ class DashboardController extends Controller
             ->whereIn('guru_id', $belumIsiGuruIds->values())
             ->groupBy('guru_id');
 
-        // Mengajar hari ini: semua jadwal hari ini, urutkan per jam
+        // Mengajar hari ini: dikelompokkan per guru → per grup jam berurutan
         $mengajarSekarang = $semualJadwalHariIni
             ->filter(fn($j) => $j->jamPelajaran !== null)
-            ->sortBy(fn($j) => $j->jamPelajaran->jam_ke);
+            ->groupBy('guru_id')
+            ->map(fn($jadwalGuru) => Jadwal::grupkanBerurutan($jadwalGuru->sortBy(fn($j) => $j->jamPelajaran->jam_mulai)))
+            ->values()
+            ->flatten(1)
+            ->sortBy(fn($grup) => $grup['jadwal']->first()->jamPelajaran->jam_mulai)
+            ->values();
 
         $jurnalHariIni  = Jurnal::whereDate('tanggal', today())->count();
         $jurnalBulanIni = Jurnal::whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [now()->format('Y-m')])->count();
@@ -58,11 +64,60 @@ class DashboardController extends Controller
             ->take(8)
             ->get();
 
-        return view('ks.dashboard', compact(
+        // Tren kepatuhan 30 hari terakhir
+        $trenKepatuhan = $this->getTrenKepatuhan($tahunAktif);
+
+        return view('dashboard.index', compact(
             'totalGuru', 'belumIsiHariIni', 'jadwalBelumIsi',
             'mengajarSekarang',
-            'jurnalHariIni', 'jurnalBulanIni', 'jurnalTerbaru', 'tahunAktif'
+            'jurnalHariIni', 'jurnalBulanIni', 'jurnalTerbaru', 'tahunAktif',
+            'trenKepatuhan'
         ));
+    }
+
+    private function getTrenKepatuhan(?TahunAjaran $tahunAktif): array
+    {
+        $hasil = [];
+
+        // Guru per hari-of-week berdasarkan jadwal aktif (1=Senin ... 7=Minggu)
+        $jadwalAktif = Jadwal::when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
+            ->with('jamPelajaran')
+            ->get()
+            ->filter(fn($j) => $j->jamPelajaran !== null)
+            ->groupBy(fn($j) => $j->jamPelajaran->hari) // hari: 1-7
+            ->map(fn($items) => $items->pluck('guru_id')->unique()->count());
+
+        // Jurnal 30 hari terakhir: hitung guru unik per tanggal
+        $jurnalPerHari = Jurnal::select('tanggal', DB::raw('COUNT(DISTINCT guru_id) as jumlah_isi'))
+            ->where('tanggal', '>=', now()->subDays(29)->toDateString())
+            ->groupBy('tanggal')
+            ->get()
+            ->keyBy(fn($r) => $r->tanggal->toDateString());
+
+        for ($i = 29; $i >= 0; $i--) {
+            $tgl       = now()->subDays($i)->toDate();
+            $tglStr    = now()->subDays($i)->toDateString();
+            $hariOfWeek = (int) now()->subDays($i)->dayOfWeekIso; // 1=Senin
+            $totalGuru  = $jadwalAktif->get($hariOfWeek, 0);
+            $jumlahIsi  = $jurnalPerHari->has($tglStr) ? (int) $jurnalPerHari[$tglStr]->jumlah_isi : 0;
+
+            $persen = $totalGuru > 0 ? round(($jumlahIsi / $totalGuru) * 100) : null;
+
+            // Hari Minggu / hari tanpa jadwal = null (tidak ditampilkan sebagai 0%)
+            if ($totalGuru === 0) {
+                $persen = null;
+            }
+
+            $hasil[] = [
+                'tanggal' => $tglStr,
+                'label'   => \Carbon\Carbon::parse($tgl)->translatedFormat('D j M'),
+                'persen'  => $persen,
+                'isi'     => $jumlahIsi,
+                'total'   => $totalGuru,
+            ];
+        }
+
+        return $hasil;
     }
 
     public function mengajarSekarang(): View
@@ -70,15 +125,34 @@ class DashboardController extends Controller
         $tahunAktif = TahunAjaran::aktif();
         $hariIni    = now()->dayOfWeekIso;
 
-        $mengajarSekarang = Jadwal::whereHas('jamPelajaran', fn($q) => $q->where('hari', $hariIni))
+        $semuaJadwal = Jadwal::whereHas('jamPelajaran', fn($q) => $q->where('hari', $hariIni))
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->with(['guru', 'kelas', 'mapel', 'jamPelajaran'])
             ->get()
             ->filter(fn($j) => $j->jamPelajaran !== null)
-            ->sortBy(fn($j) => $j->jamPelajaran->jam_ke)
+            ->sortBy(fn($j) => $j->jamPelajaran?->jam_mulai)
             ->values();
 
-        return view('ks.dashboard.mengajar-sekarang', compact('mengajarSekarang', 'tahunAktif'));
+        $jurnalsToday = \App\Models\Jurnal::whereDate('tanggal', today())->get();
+
+        // Kelompokkan per guru → per grup jam berurutan (mapel+kelas sama)
+        $mengajarSekarang = $semuaJadwal
+            ->groupBy('guru_id')
+            ->map(fn($jadwalGuru) => Jadwal::grupkanBerurutan($jadwalGuru))
+            ->values()
+            ->flatten(1) // jadi flat collection of grup
+            ->sortBy(fn($grup) => $grup['jadwal']->first()->jamPelajaran->jam_mulai)
+            ->map(function ($grup) use ($jurnalsToday) {
+                $first = $grup['jadwal']->first();
+                $grup['jurnal'] = $jurnalsToday->first(function ($j) use ($grup, $first) {
+                    return in_array($j->jadwal_id, $grup['ids']) || 
+                           ($j->guru_id == $first->guru_id && $j->mapel_id == $first->mapel_id && $j->kelas_id == $first->kelas_id);
+                });
+                return $grup;
+            })
+            ->values();
+
+        return view('dashboard.mengajar-sekarang', compact('mengajarSekarang', 'tahunAktif'));
     }
 
     public function belumIsiJurnal(): View
@@ -105,6 +179,6 @@ class DashboardController extends Controller
             ->whereIn('guru_id', $belumIsiGuruIds->values())
             ->groupBy('guru_id');
 
-        return view('ks.dashboard.belum-isi-jurnal', compact('belumIsiHariIni', 'jadwalBelumIsi', 'tahunAktif'));
+        return view('dashboard.belum-isi-jurnal', compact('belumIsiHariIni', 'jadwalBelumIsi', 'tahunAktif'));
     }
 }

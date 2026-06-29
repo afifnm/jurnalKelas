@@ -15,8 +15,8 @@
             <h2 class="text-lg font-bold text-slate-800 dark:text-white">Jurnal Mengajar</h2>
             <p class="text-sm text-slate-400 dark:text-zinc-500">Riwayat dan pengisian jurnal harian</p>
         </div>
-        <a href="{{ route('guru.jurnal.create') }}" class="btn-primary">
-            <i data-lucide="notebook-pen" class="w-4 h-4"></i> Isi Jurnal
+        <a href="{{ route('guru.jurnal.create') }}" class="btn-primary px-5 py-2.5 text-base font-bold shadow-md">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i> TAMBAH JURNAL BARU
         </a>
     </div>
 
@@ -47,11 +47,16 @@
             </span>
             @else
             <a href="{{ route('guru.jurnal.create', ['jadwal_id' => $first->id]) }}"
-               class="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-all border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                <span class="font-medium">{{ $first->mapel->nama }}</span>
-                <span class="text-xs opacity-70">{{ $first->kelas->nama }} {{ $jamMulai }}–{{ $jamSelesai }}</span>
-                @if($jumlahJam > 1)<span class="text-[10px] bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full font-medium">{{ $jumlahJam }} jam</span>@endif
+               class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 shadow-sm">
+                <i data-lucide="pencil" class="w-6 h-6 text-amber-600"></i>
+                <div>
+                    <span class="block font-bold text-base">{{ $first->mapel->nama }}</span>
+                    <span class="text-sm opacity-90">Kelas {{ $first->kelas->nama }} | {{ $jamMulai }}–{{ $jamSelesai }}</span>
+                </div>
+                <div class="flex flex-col gap-1 items-end ml-auto">
+                    @if($jumlahJam > 1)<span class="text-[10px] bg-amber-200 dark:bg-amber-800 px-2 py-0.5 rounded-md font-bold">{{ $jumlahJam }} Jam</span>@endif
+                    <span class="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-md font-bold animate-pulse">KLIK UNTUK ISI</span>
+                </div>
             </a>
             @endif
             @endforeach
@@ -91,23 +96,25 @@
                     <div class="flex-1 min-w-0">
                         <p class="font-semibold text-slate-700 dark:text-slate-200 text-sm">{{ $j->tanggal->translatedFormat('l, j F Y') }}</p>
                         <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                            <span class="font-medium">{{ $j->kelas->nama }}</span> · {{ $j->mapel->nama }}
+                            <span class="font-medium">
+                                <a href="{{ route('guru.jadwal.by-kelas', ['kelas_id' => $j->kelas->id]) }}" class="hover:underline hover:text-blue-600">{{ $j->kelas->nama }}</a>
+                            </span> · {{ $j->mapel->nama }}
                         </p>
                     </div>
-                    @if($j->is_terlambat)
-                    <span class="badge bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 flex-shrink-0">
-                        <i data-lucide="clock-alert" class="w-3 h-3"></i> +{{ $j->menit_terlambat }} mnt
+                    @if($j->isInputDalamJamMengajar())
+                    <span class="badge badge-validated flex-shrink-0">
+                        <i data-lucide="clock-check" class="w-3 h-3"></i> Dalam jam
                     </span>
                     @else
-                    <span class="badge badge-validated flex-shrink-0">
-                        <i data-lucide="clock-check" class="w-3 h-3"></i> Tepat waktu
+                    <span class="badge bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 flex-shrink-0">
+                        <i data-lucide="clock-alert" class="w-3 h-3"></i> Di luar jam
                     </span>
                     @endif
                 </div>
                 <p class="text-xs text-slate-600 dark:text-zinc-400 line-clamp-2 mb-3">{{ $j->materi }}</p>
                 <div class="flex items-center justify-between gap-2">
                     <span class="text-xs text-slate-400 dark:text-zinc-500 font-mono">
-                        Masuk: {{ $j->jam_masuk_aktual ? substr($j->jam_masuk_aktual, 0, 5) : '-' }}
+                        Input: {{ $j->created_at->format('H:i') }}
                         @if($j->lampiran->count())
                         · <i data-lucide="paperclip" class="w-3 h-3 inline-block -mt-0.5"></i> {{ $j->lampiran->count() }}
                         @endif
@@ -149,7 +156,7 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider w-10">#</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Tanggal</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Kelas / Mapel</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Masuk</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Waktu Input</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Materi</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
                     </tr>
@@ -162,16 +169,16 @@
                             <p class="font-semibold text-slate-700 dark:text-slate-200">{{ $j->tanggal->translatedFormat('l, j F Y') }}</p>
                         </td>
                         <td class="px-4 py-3.5">
-                            <p class="font-medium text-slate-700 dark:text-slate-200">{{ $j->kelas->nama }}</p>
+                            <p class="font-medium text-slate-700 dark:text-slate-200">
+                                <a href="{{ route('guru.jadwal.by-kelas', ['kelas_id' => $j->kelas->id]) }}" class="hover:underline hover:text-blue-600">{{ $j->kelas->nama }}</a>
+                            </p>
                             <p class="text-xs text-slate-400">{{ $j->mapel->nama }}</p>
                         </td>
                         <td class="px-4 py-3.5">
-                            <p class="font-mono text-sm text-slate-600 dark:text-zinc-400">{{ $j->jam_masuk_aktual ? substr($j->jam_masuk_aktual, 0, 5) : '-' }}</p>
-                            @if($j->is_terlambat)
-                            <span class="text-[10px] text-red-500 dark:text-red-400 font-medium">+{{ $j->menit_terlambat }} menit</span>
-                            @else
-                            <span class="text-[10px] text-green-500 dark:text-green-400 font-medium">Tepat waktu</span>
-                            @endif
+                            <p class="font-mono text-sm text-slate-600 dark:text-zinc-400">{{ $j->created_at->format('H:i') }}</p>
+                            <span class="text-[10px] font-medium {{ $j->isInputDalamJamMengajar() ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
+                                {{ $j->created_at->translatedFormat('d/m/Y') }}
+                            </span>
                         </td>
                         <td class="px-4 py-3.5">
                             <p class="text-slate-600 dark:text-zinc-400 line-clamp-2 text-sm max-w-48">{{ $j->materi }}</p>
@@ -253,18 +260,8 @@
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.mapel?.nama"></p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Masuk</p>
-                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="(detailData.jam_masuk_aktual || '-').substring(0,5)"></p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Keluar</p>
-                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.jam_keluar_aktual ? detailData.jam_keluar_aktual.substring(0,5) : '-'"></p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Keterlambatan</p>
-                                    <p class="font-semibold"
-                                       :class="detailData.is_terlambat ? 'text-red-500 dark:text-red-400' : 'text-green-500 dark:text-green-400'"
-                                       x-text="detailData.is_terlambat ? '+' + detailData.menit_terlambat + ' menit' : 'Tepat waktu'"></p>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Waktu Input</p>
+                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.created_at ? detailData.created_at.substring(0,16).replace('T',' ') : '-'"></p>
                                 </div>
                             </div>
 

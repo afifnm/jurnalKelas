@@ -18,7 +18,7 @@ class StoreJadwalRequest extends FormRequest
             'kelas_id'        => ['required', 'exists:kelas,id'],
             'mapel_id'        => ['required', 'exists:mapel,id'],
             'tahun_ajaran_id' => ['required', 'exists:tahun_ajaran,id'],
-            'jam_pelajaran_id'=> ['required', 'exists:jam_pelajaran,id'],
+            'jam_pelajaran_id'=> ['required', \Illuminate\Validation\Rule::exists('jam_pelajaran', 'id')->where('is_istirahat', false)],
         ];
     }
 }

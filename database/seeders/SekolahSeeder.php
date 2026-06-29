@@ -10,14 +10,14 @@ class SekolahSeeder extends Seeder
     public function run(): void
     {
         Sekolah::create([
-            'nama'           => 'SMK Nusantara Bangsa',
-            'nama_yayasan'   => 'Yayasan Pendidikan Nusantara',
+            'nama'           => 'SMK Pembangunan Nasional Sukoharjo',
+            'nama_yayasan'   => 'Yayasan Bina Praja',
             'npsn'           => '20512345',
-            'alamat'         => 'Jl. Pendidikan No. 1, Kota Bandung, Jawa Barat 40111',
-            'kepala_sekolah' => 'Dr. Ahmad Santoso, M.Pd.',
-            'telepon'        => '022-1234567',
-            'email'          => 'info@smknusantara.sch.id',
-            'website'        => 'www.smknusantara.sch.id',
+            'alamat'         => 'Sawah, Bulakrejo, Kec. Sukoharjo, Kabupaten Sukoharjo, Jawa Tengah 57551',
+            'kepala_sekolah' => 'Marsono,S.Kom',
+            'telepon'        => '(0271)592863',
+            'email'          => 'mail@smkpemnasskh.sch.id',
+            'website'        => 'www.smkpemnasskh.sch.id',
         ]);
     }
 }

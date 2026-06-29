@@ -12,7 +12,7 @@
 <div class="flex items-center justify-between mb-5">
     <div>
         <h2 class="text-lg font-bold text-slate-800 dark:text-white">Jam Pelajaran</h2>
-        <p class="text-sm text-slate-400 dark:text-zinc-500">Kelola slot jam ke-1 s/d ke-8 untuk setiap hari</p>
+        <p class="text-sm text-slate-400 dark:text-zinc-500">Kelola slot jam pelajaran dan jam istirahat untuk setiap hari</p>
     </div>
     <a href="{{ route('admin.jadwal.index') }}" class="btn-secondary text-sm">
         <i data-lucide="calendar" class="w-4 h-4"></i> Ke Jadwal
@@ -80,13 +80,26 @@
         @endif
 
         <div id="slot-list-{{ $hariNum }}" class="divide-y divide-slate-100 dark:divide-zinc-700/50">
-            @foreach($slotsHari->sortBy('jam_ke') as $slot)
-            <div data-slot-id="{{ $slot->id }}" class="flex items-center gap-4 px-5 py-3">
-                <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center flex-shrink-0">
+            @foreach($slotsHari->sortBy('jam_mulai') as $slot)
+            <div data-slot-id="{{ $slot->id }}" data-jam-mulai="{{ substr($slot->jam_mulai, 0, 5) }}" class="flex items-center gap-4 px-5 py-3 {{ $slot->is_istirahat ? 'bg-sky-50/50 dark:bg-sky-950/10' : '' }}">
+                @if($slot->is_istirahat)
+                <div class="icon-wrapper w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-950/50 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="coffee" class="w-4 h-4 text-sky-500 dark:text-sky-400"></i>
+                </div>
+                @else
+                <div class="icon-wrapper w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center flex-shrink-0">
                     <span class="text-xs font-bold text-amber-700 dark:text-amber-400">{{ $slot->jam_ke }}</span>
                 </div>
+                @endif
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Jam ke-{{ $slot->jam_ke }}</p>
+                    <div class="flex items-center gap-2">
+                        @if($slot->is_istirahat)
+                        <p class="text-sm font-semibold text-sky-700 dark:text-sky-300">Istirahat</p>
+                        <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400">ISTIRAHAT</span>
+                        @else
+                        <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Jam ke-{{ $slot->jam_ke }}</p>
+                        @endif
+                    </div>
                     <p class="text-xs text-slate-400 dark:text-zinc-500 font-mono">
                         {{ substr($slot->jam_mulai, 0, 5) }} – {{ substr($slot->jam_selesai, 0, 5) }}
                     </p>
@@ -126,13 +139,26 @@
             </button>
         </div>
         <form @submit.prevent="submitForm()" class="p-6 space-y-4">
-            <div class="grid grid-cols-3 gap-3">
+            {{-- Checkbox Istirahat --}}
+            <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-zinc-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
+                   :class="form.is_istirahat ? 'border-sky-300 dark:border-sky-700 bg-sky-50/60 dark:bg-sky-950/20' : ''">
+                <input type="checkbox" x-model="form.is_istirahat"
+                       @change="autoFillIstirahat"
+                       class="w-4 h-4 rounded border-slate-300 text-sky-500 focus:ring-sky-400">
                 <div>
+                    <p class="text-sm font-medium text-slate-700 dark:text-zinc-200">Jam Istirahat</p>
+                    <p class="text-xs text-slate-400 dark:text-zinc-500">Centang jika ini adalah slot istirahat (tidak bisa diisi jadwal)</p>
+                </div>
+                <i data-lucide="coffee" class="w-4 h-4 text-sky-400 ml-auto flex-shrink-0" x-show="form.is_istirahat" style="display:none"></i>
+            </label>
+
+            <div class="grid gap-3" :class="form.is_istirahat ? 'grid-cols-2' : 'grid-cols-3'">
+                <div x-show="!form.is_istirahat" style="display:block">
                     <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">Jam Ke</label>
                     <select x-model="form.jam_ke"
                             @change="autoFillJam"
                             class="w-full text-sm border border-slate-200 dark:border-zinc-700 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-amber-400 dark:focus:border-amber-500"
-                            required>
+                            :required="!form.is_istirahat">
                         <option value="">–</option>
                         @foreach(range(0, 12) as $ke)
                         <option value="{{ $ke }}">{{ $ke }}</option>
@@ -225,7 +251,14 @@
 @push('scripts')
 <script>
 function jamPelajaranManager() {
-    const defaultForm = { jam_ke: '', jam_mulai: '', jam_selesai: '', hari: '' };
+    const defaultForm = { jam_ke: '', jam_mulai: '', jam_selesai: '', hari: '', is_istirahat: false };
+
+    // Jumlah slot istirahat yang sudah ada per hari (diisi dari PHP, diupdate dinamis)
+    const istirahatCount = {
+        @foreach($namaHari as $hariNum => $_)
+        {{ $hariNum }}: {{ isset($slots[$hariNum]) ? $slots[$hariNum]->where('is_istirahat', true)->count() : 0 }},
+        @endforeach
+    };
     return {
         activeHari: {{ array_key_first($namaHari) ?? 1 }},
         modal: false, mode: 'create', loading: false, errorMsg: '', editId: null,
@@ -251,13 +284,32 @@ function jamPelajaranManager() {
             this.mode = 'edit';
             this.editId = item.id;
             this.form = {
-                hari:        String(item.hari),
-                jam_ke:      String(item.jam_ke),
-                jam_mulai:   (item.jam_mulai || '').substring(0, 5),
-                jam_selesai: (item.jam_selesai || '').substring(0, 5),
+                hari:         String(item.hari),
+                jam_ke:       String(item.jam_ke),
+                jam_mulai:    (item.jam_mulai || '').substring(0, 5),
+                jam_selesai:  (item.jam_selesai || '').substring(0, 5),
+                is_istirahat: !!item.is_istirahat,
             };
             this.errorMsg = '';
             this.modal = true;
+        },
+
+        autoFillIstirahat() {
+            if (!this.form.is_istirahat) return;
+            // Hanya auto-fill saat mode create dan field masih kosong
+            if (this.mode === 'edit') return;
+
+            const hari = parseInt(this.form.hari);
+            const jumlah = istirahatCount[hari] ?? 0;
+
+            if (jumlah === 0) {
+                this.form.jam_mulai  = '10:00';
+                this.form.jam_selesai = '10:15';
+            } else if (jumlah === 1) {
+                this.form.jam_mulai  = '11:45';
+                this.form.jam_selesai = '12:15';
+            }
+            // jika sudah ≥2 istirahat, biarkan user isi manual
         },
 
         autoFillJam() {
@@ -362,30 +414,48 @@ function jamPelajaranManager() {
             const empty   = document.getElementById(`empty-${slot.hari}`);
             const mulai   = (slot.jam_mulai   || '').substring(0, 5);
             const selesai = (slot.jam_selesai || '').substring(0, 5);
+            const isIstirahat = !!slot.is_istirahat;
 
             if (!isNew) {
                 // Update existing row
                 const existing = document.querySelector(`[data-slot-id="${slot.id}"]`);
                 if (existing) {
-                    existing.querySelector('.text-sm.font-semibold').textContent = `Jam ke-${slot.jam_ke}`;
+                    existing.className = `flex items-center gap-4 px-5 py-3${isIstirahat ? ' bg-sky-50/50 dark:bg-sky-950/10' : ''}`;
+                    if (isIstirahat) {
+                        existing.querySelector('.icon-wrapper').className = 'icon-wrapper w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-950/50 flex items-center justify-center flex-shrink-0';
+                        existing.querySelector('.icon-wrapper').innerHTML = '<i data-lucide="coffee" class="w-4 h-4 text-sky-500 dark:text-sky-400"></i>';
+                        existing.querySelector('.text-sm.font-semibold').textContent = 'Istirahat';
+                        existing.querySelector('.text-sm.font-semibold').className = 'text-sm font-semibold text-sky-700 dark:text-sky-300';
+                    } else {
+                        existing.querySelector('.icon-wrapper').className = 'icon-wrapper w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center flex-shrink-0';
+                        existing.querySelector('.icon-wrapper').innerHTML = `<span class="text-xs font-bold text-amber-700 dark:text-amber-400">${slot.jam_ke}</span>`;
+                        existing.querySelector('.text-sm.font-semibold').textContent = `Jam ke-${slot.jam_ke}`;
+                        existing.querySelector('.text-sm.font-semibold').className = 'text-sm font-semibold text-slate-700 dark:text-slate-200';
+                    }
                     existing.querySelector('.font-mono').textContent = `${mulai} – ${selesai}`;
-                    existing.querySelector('.text-xs.font-bold').textContent = slot.jam_ke;
                     // Re-bind onclick buttons
                     const btns = existing.querySelectorAll('button');
                     btns[0].setAttribute('onclick', `_jamPelajaranEdit(${JSON.stringify(slot).replace(/"/g, '&quot;')})`);
                     btns[1].setAttribute('onclick', `_jamPelajaranDelete(${slot.id}, ${slot.jam_ke}, ${slot.hari})`);
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
                     return;
                 }
             }
 
             // Build new row HTML
+            const iconHtml = isIstirahat
+                ? `<div class="icon-wrapper w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-950/50 flex items-center justify-center flex-shrink-0"><i data-lucide="coffee" class="w-4 h-4 text-sky-500 dark:text-sky-400"></i></div>`
+                : `<div class="icon-wrapper w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center flex-shrink-0"><span class="text-xs font-bold text-amber-700 dark:text-amber-400">${slot.jam_ke}</span></div>`;
+
+            const labelHtml = isIstirahat
+                ? `<div class="flex items-center gap-2"><p class="text-sm font-semibold text-sky-700 dark:text-sky-300">Istirahat</p><span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400">ISTIRAHAT</span></div>`
+                : `<div class="flex items-center gap-2"><p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Jam ke-${slot.jam_ke}</p></div>`;
+
             const html = `
-                <div data-slot-id="${slot.id}" class="flex items-center gap-4 px-5 py-3">
-                    <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center flex-shrink-0">
-                        <span class="text-xs font-bold text-amber-700 dark:text-amber-400">${slot.jam_ke}</span>
-                    </div>
+                <div data-slot-id="${slot.id}" data-jam-mulai="${mulai}" class="flex items-center gap-4 px-5 py-3${isIstirahat ? ' bg-sky-50/50 dark:bg-sky-950/10' : ''}">
+                    ${iconHtml}
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Jam ke-${slot.jam_ke}</p>
+                        ${labelHtml}
                         <p class="text-xs text-slate-400 dark:text-zinc-500 font-mono">${mulai} – ${selesai}</p>
                     </div>
                     <div class="flex items-center gap-1 flex-shrink-0">
@@ -404,18 +474,21 @@ function jamPelajaranManager() {
             template.innerHTML = html.trim();
             const el = template.content.firstChild;
 
-            // Insert sorted by jam_ke
+            // Insert sorted by jam_mulai
             const rows = [...list.querySelectorAll('[data-slot-id]')];
             let inserted = false;
             for (const row of rows) {
-                const existingKe = parseInt(row.querySelector('.text-xs.font-bold')?.textContent || '99');
-                if (existingKe > slot.jam_ke) { list.insertBefore(el, row); inserted = true; break; }
+                const existingMulai = row.dataset.jamMulai || '99:99';
+                if (existingMulai > mulai) { list.insertBefore(el, row); inserted = true; break; }
             }
             if (!inserted) list.appendChild(el);
 
             if (empty) empty.style.display = 'none';
             if (typeof lucide !== 'undefined') lucide.createIcons();
             this.updateSlotCount(slot.hari, 1);
+            if (slot.is_istirahat) {
+                istirahatCount[slot.hari] = (istirahatCount[slot.hari] ?? 0) + 1;
+            }
         },
 
         updateSlotCount(hari, delta) {

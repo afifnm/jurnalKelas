@@ -17,6 +17,7 @@ return new class extends Migration
             $table->tinyInteger('jam_ke'); // 1, 2, 3, ... 8
             $table->time('jam_mulai');
             $table->time('jam_selesai');
+            $table->boolean('is_istirahat')->default(false);
             $table->timestamps();
             $table->softDeletes();
             $table->unique(['hari', 'jam_ke']);

@@ -16,17 +16,19 @@ class UpdateJurnalRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'kelas_id'              => ['required', 'exists:kelas,id'],
-            'mapel_id'              => ['required', 'exists:mapel,id'],
-            'tanggal'               => ['required', 'date', 'before_or_equal:today'],
-            'jam_masuk_aktual'      => ['required', 'date_format:H:i'],
-            'jam_keluar_aktual'     => ['nullable', 'date_format:H:i', 'after:jam_masuk_aktual'],
             'materi'                => ['required', 'string', 'max:2000'],
             'catatan'               => ['nullable', 'string', 'max:1000'],
             'lampiran'              => ['nullable', 'array', 'max:5'],
-            'lampiran.*'            => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'lampiran.*'            => ['image', 'mimes:jpg,jpeg,png,webp'],
             'keterangan_lampiran'   => ['nullable', 'array'],
             'keterangan_lampiran.*' => ['nullable', 'string', 'max:200'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'lampiran.*.uploaded' => 'Gagal mengupload foto. Mungkin file terlalu besar untuk diterima oleh server atau format tidak didukung.',
         ];
     }
 }

@@ -22,7 +22,7 @@ class DashboardController extends Controller
             ->where('guru_id', $guru->id)
             ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->orderBy('jam_pelajaran.hari')
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get()
             ->filter(fn($j) => $j->jamPelajaran !== null)
             ->groupBy(fn($j) => $j->jamPelajaran->hari);
@@ -34,18 +34,19 @@ class DashboardController extends Controller
             ->pluck('jadwal_id')
             ->toArray();
 
-        $belumDiisi        = $jadwalHariIni->filter(fn($j) => ! in_array($j->id, $sudahDiisiHariIni));
-        $grupJadwalHariIni = Jadwal::grupkanBerurutan($jadwalHariIni->sortBy(fn($j) => $j->jamPelajaran->jam_ke));
-        $grupJadwalMinggu  = $jadwalMinggu->map(fn($hariItems) => Jadwal::grupkanBerurutan($hariItems->sortBy(fn($j) => $j->jamPelajaran->jam_ke)));
+        $grupJadwalHariIni = Jadwal::grupkanBerurutan($jadwalHariIni->sortBy(fn($j) => $j->jamPelajaran?->jam_mulai));
+        $grupJadwalMinggu  = $jadwalMinggu->map(fn($hariItems) => Jadwal::grupkanBerurutan($hariItems->sortBy(fn($j) => $j->jamPelajaran?->jam_mulai)));
+
+        // Belum diisi = grup yang belum ada jurnalnya (1 grup = 1 input jurnal)
+        $belumDiisi = $grupJadwalHariIni->filter(
+            fn($grup) => count(array_intersect($grup['ids'], $sudahDiisiHariIni)) === 0
+        );
 
         $jurnalBulanIni = Jurnal::where('guru_id', $guru->id)
             ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [now()->format('Y-m')])
             ->count();
 
-        $jurnalTerlambatBulanIni = Jurnal::where('guru_id', $guru->id)
-            ->whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [now()->format('Y-m')])
-            ->where('is_terlambat', true)
-            ->count();
+        $jurnalTerlambatBulanIni = 0;
 
         $riwayatJurnal = Jurnal::with(['kelas', 'mapel'])
             ->where('guru_id', $guru->id)

@@ -80,7 +80,7 @@
         <div class="px-3 py-4 border-t border-slate-200/80 dark:border-zinc-700/50">
             <div class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer group">
                 <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                    {{ strtoupper(substr(auth()->user()->nama, 0, 1)) }}
+                    {{ auth()->user()->username }}
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{{ auth()->user()->nama }}</p>
@@ -111,10 +111,17 @@
             </button>
             @endif
 
-            <!-- Breadcrumb -->
+            <!-- Breadcrumb / Mobile Title -->
             <div class="flex-1 min-w-0">
+                <!-- Mobile Logo -->
+                <div class="flex lg:hidden items-center gap-2.5">
+                    <img src="{{ asset('logo.webp') }}" alt="Logo" class="w-7 h-7 object-contain drop-shadow-sm">
+                    <span class="text-[15px] font-bold text-slate-800 dark:text-white tracking-tight leading-none mt-0.5">SMK Pemnas Sukoharjo</span>
+                </div>
+
+                <!-- Desktop Breadcrumb -->
                 @hasSection('breadcrumb')
-                <nav class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400">
+                <nav class="hidden lg:flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400">
                     @yield('breadcrumb')
                 </nav>
                 @endif
@@ -163,10 +170,16 @@
         <!-- Page Content -->
         <main class="flex-1 px-4 lg:px-6 pt-4 lg:pt-6 pb-24 lg:pb-6 page-content">
             @if(session('success'))
-            <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
-                 class="mb-4 flex items-center gap-3 px-4 py-3 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800/40 text-green-700 dark:text-green-400 rounded-xl text-sm">
-                <i data-lucide="check-circle-2" class="w-4 h-4 flex-shrink-0"></i>
-                {{ session('success') }}
+            <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 6000)"
+                 x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                 class="mb-4 flex items-center gap-3 px-5 py-4 bg-green-50 dark:bg-green-950/40 border-2 border-green-300 dark:border-green-700/60 text-green-800 dark:text-green-300 rounded-2xl shadow-sm">
+                <div class="w-8 h-8 rounded-xl bg-green-100 dark:bg-green-900/50 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="check-circle-2" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+                </div>
+                <p class="font-semibold text-sm flex-1">{{ session('success') }}</p>
+                <button @click="show = false" class="text-green-500 hover:text-green-700 dark:hover:text-green-300 flex-shrink-0">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
             </div>
             @endif
 

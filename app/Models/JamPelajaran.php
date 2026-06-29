@@ -12,11 +12,12 @@ class JamPelajaran extends Model
 
     protected $table = 'jam_pelajaran';
 
-    protected $fillable = ['hari', 'jam_ke', 'jam_mulai', 'jam_selesai'];
+    protected $fillable = ['hari', 'jam_ke', 'jam_mulai', 'jam_selesai', 'is_istirahat'];
 
     protected $casts = [
-        'hari'   => 'integer',
-        'jam_ke' => 'integer',
+        'hari'         => 'integer',
+        'jam_ke'       => 'integer',
+        'is_istirahat' => 'boolean',
     ];
 
     public function jadwal(): HasMany

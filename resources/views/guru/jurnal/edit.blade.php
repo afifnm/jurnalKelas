@@ -46,98 +46,63 @@
         </div>
         @endif
 
-        <!-- ① Kelas & Mata Pelajaran -->
-        <div class="card p-5">
+        <!-- ① Kelas & Mata Pelajaran (tampilan saja) -->
+        <div class="card p-5 opacity-80">
             <div class="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-zinc-700/50">
-                <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
+                <div class="w-7 h-7 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
                 <div>
                     <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Kelas & Mata Pelajaran</h3>
-                    <p class="text-xs text-slate-400 dark:text-zinc-500">Pilih kelas dan mata pelajaran yang diajarkan</p>
+                    <p class="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3"></i> Tidak dapat diubah</p>
                 </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-                        Kelas <span class="text-red-500">*</span>
-                    </label>
-                    <select name="kelas_id"
-                        class="input-field @error('kelas_id') border-red-400 @enderror" required>
-                        <option value="">-- Pilih Kelas --</option>
-                        @foreach($kelas as $k)
-                        <option value="{{ $k->id }}" {{ old('kelas_id', $jurnal->kelas_id) == $k->id ? 'selected' : '' }}>
-                            {{ $k->nama }}
-                        </option>
-                        @endforeach
-                    </select>
-                    @error('kelas_id')
-                    <p class="text-xs text-red-500 mt-1 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>{{ $message }}</p>
-                    @enderror
+                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-1">Kelas</p>
+                    <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 input-field bg-slate-50 dark:bg-zinc-800/50 cursor-not-allowed">{{ $jurnal->kelas->nama }}</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-                        Mata Pelajaran <span class="text-red-500">*</span>
-                    </label>
-                    <select name="mapel_id"
-                        class="input-field @error('mapel_id') border-red-400 @enderror" required>
-                        <option value="">-- Pilih Mata Pelajaran --</option>
-                        @foreach($mapel as $m)
-                        <option value="{{ $m->id }}" {{ old('mapel_id', $jurnal->mapel_id) == $m->id ? 'selected' : '' }}>
-                            {{ $m->nama }}
-                        </option>
-                        @endforeach
-                    </select>
-                    @error('mapel_id')
-                    <p class="text-xs text-red-500 mt-1 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>{{ $message }}</p>
-                    @enderror
+                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-1">Mata Pelajaran</p>
+                    <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 input-field bg-slate-50 dark:bg-zinc-800/50 cursor-not-allowed">{{ $jurnal->mapel->nama }}</p>
                 </div>
             </div>
         </div>
 
-        <!-- ② Waktu Pembelajaran -->
-        <div class="card p-5">
+        <!-- ② Waktu Pembelajaran (tampilan saja) -->
+        <div class="card p-5 opacity-80">
             <div class="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-zinc-700/50">
-                <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">2</div>
+                <div class="w-7 h-7 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 flex items-center justify-center text-xs font-bold flex-shrink-0">2</div>
                 <div>
                     <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Waktu Pembelajaran</h3>
-                    <p class="text-xs text-slate-400 dark:text-zinc-500">Tanggal dan jam masuk/keluar aktual (jam sebenarnya, bukan jadwal)</p>
+                    <p class="text-xs text-slate-400 dark:text-zinc-500 flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3"></i> Tidak dapat diubah</p>
                 </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-                        Tanggal <span class="text-red-500">*</span>
-                    </label>
-                    <input type="date" name="tanggal"
-                        value="{{ old('tanggal', $jurnal->tanggal->toDateString()) }}"
-                        max="{{ today()->toDateString() }}"
-                        class="input-field @error('tanggal') border-red-400 @enderror" required>
-                    @error('tanggal')
-                    <p class="text-xs text-red-500 mt-1 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>{{ $message }}</p>
-                    @enderror
+                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-1">Tanggal</p>
+                    <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 input-field bg-slate-50 dark:bg-zinc-800/50 cursor-not-allowed">{{ $jurnal->tanggal->translatedFormat('d F Y') }}</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-                        Jam Masuk Aktual <span class="text-red-500">*</span>
-                    </label>
-                    <input type="time" name="jam_masuk_aktual"
-                        value="{{ old('jam_masuk_aktual', substr($jurnal->jam_masuk_aktual ?? '', 0, 5)) }}"
-                        class="input-field @error('jam_masuk_aktual') border-red-400 @enderror" required>
-                    @error('jam_masuk_aktual')
-                    <p class="text-xs text-red-500 mt-1 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>{{ $message }}</p>
-                    @enderror
-                    <p class="text-xs text-slate-400 dark:text-zinc-600 mt-1">Jam saat Anda benar-benar masuk kelas</p>
+                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-1 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Jam Mengajar</p>
+                    @if($jamSesi)
+                    <p class="text-sm font-mono font-semibold text-slate-700 dark:text-slate-200 input-field bg-slate-50 dark:bg-zinc-800/50 cursor-not-allowed">
+                        {{ $jamSesi['mulai'] }}–{{ $jamSesi['selesai'] }}
+                        @if($jamSesi['jumlah'] > 1)
+                        <span class="text-xs font-normal text-slate-400 ml-1">({{ $jamSesi['jumlah'] }} JP)</span>
+                        @endif
+                    </p>
+                    @else
+                    <p class="text-sm text-slate-400 dark:text-zinc-500 input-field bg-slate-50 dark:bg-zinc-800/50 cursor-not-allowed">—</p>
+                    @endif
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1.5">
-                        Jam Keluar
-                        <span class="text-slate-400 dark:text-zinc-500 font-normal text-xs">(opsional)</span>
-                    </label>
-                    <input type="time" name="jam_keluar_aktual"
-                        value="{{ old('jam_keluar_aktual', substr($jurnal->jam_keluar_aktual ?? '', 0, 5)) }}"
-                        class="input-field @error('jam_keluar_aktual') border-red-400 @enderror">
-                    @error('jam_keluar_aktual')
-                    <p class="text-xs text-red-500 mt-1 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>{{ $message }}</p>
-                    @enderror
+                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-1">Waktu Input</p>
+                    <p class="text-sm font-mono text-slate-700 dark:text-slate-200 input-field bg-slate-50 dark:bg-zinc-800/50 cursor-not-allowed">{{ $jurnal->created_at->format('H:i') }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-1">Status</p>
+                    <p class="text-sm font-semibold input-field bg-slate-50 dark:bg-zinc-800/50 cursor-not-allowed {{ $jurnal->isInputDalamJamMengajar() ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
+                        {{ $jurnal->isInputDalamJamMengajar() ? '✓ Dalam jam' : '✗ Di luar jam' }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -145,7 +110,7 @@
         <!-- ③ Catatan Mengajar -->
         <div class="card p-5">
             <div class="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-zinc-700/50">
-                <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</div>
+                <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">✎</div>
                 <div>
                     <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Catatan Mengajar</h3>
                     <p class="text-xs text-slate-400 dark:text-zinc-500">Tuliskan apa yang Anda ajarkan</p>
@@ -192,7 +157,7 @@
         <!-- ④ Foto Dokumentasi -->
         <div class="card p-5">
             <div class="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-zinc-700/50">
-                <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</div>
+                <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">📷</div>
                 <div>
                     <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Foto Dokumentasi KBM</h3>
                     <p class="text-xs text-slate-400 dark:text-zinc-500">Opsional · Maks. 5 foto · JPG/PNG/WEBP · Maks. 5 MB per foto</p>
@@ -330,15 +295,41 @@ function jurnalEditForm() {
         addFiles(files) {
             files.slice(0, 5 - this.selectedFiles.length).forEach(f => {
                 if (this.selectedFiles.length >= 5) return;
-                this.selectedFiles.push(f);
                 const reader = new FileReader();
                 reader.onload = e => {
-                    this.previews.push(e.target.result);
-                    this.$nextTick(() => lucide.createIcons());
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 1200;
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height && width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        } else if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        canvas.toBlob(blob => {
+                            if (!blob) return;
+                            const newFile = new File([blob], f.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                                type: 'image/webp',
+                                lastModified: Date.now()
+                            });
+                            this.selectedFiles.push(newFile);
+                            this.previews.push(canvas.toDataURL('image/webp', 0.8));
+                            this.syncFileInput();
+                            this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+                        }, 'image/webp', 0.8);
+                    };
+                    img.src = e.target.result;
                 };
                 reader.readAsDataURL(f);
             });
-            this.syncFileInput();
         },
         removeFile(i) {
             this.previews.splice(i, 1);

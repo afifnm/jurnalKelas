@@ -155,7 +155,7 @@
   .td-jam    { white-space: nowrap; font-family: 'Courier New', monospace; font-size: 11px; color: #7c3aed; font-weight: 700; width: 90px; }
   .td-mapel  { font-weight: 600; width: 130px; }
   .td-kelas  { color: #475569; width: 100px; }
-  .td-jam-aktual { font-family: 'Courier New', monospace; font-size: 10px; width: 80px; color: #475569; white-space: nowrap; }
+  .td-waktu-input { font-family: 'Courier New', monospace; font-size: 10px; width: 110px; white-space: nowrap; }
   .td-status { width: 90px; }
   .td-materi { min-width: 180px; }
   .td-catatan { color: #475569; min-width: 120px; }
@@ -177,6 +177,18 @@
     padding: 2px 7px; border-radius: 10px;
     background: #fee2e2; color: #dc2626;
     font-size: 10px; font-weight: 600; white-space: nowrap;
+  }
+  .badge-input-ok {
+    display: inline-block;
+    padding: 2px 7px; border-radius: 10px;
+    background: #dcfce7; color: #15803d;
+    font-size: 10px; font-weight: 600;
+  }
+  .badge-input-late {
+    display: inline-block;
+    padding: 2px 7px; border-radius: 10px;
+    background: #fee2e2; color: #dc2626;
+    font-size: 10px; font-weight: 600;
   }
 
   tr.row-missing td { background: #fff5f5 !important; }
@@ -203,9 +215,11 @@
     tr.row-missing td { background: #fff0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .info-bar, .stats-bar .stat { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .doc-footer { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .badge-ok     { background: #d1fae5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .badge-late   { background: #fef3c7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge-ok      { background: #d1fae5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge-late    { background: #fef3c7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .badge-missing { background: #fee2e2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge-input-ok   { background: #d1fae5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge-input-late { background: #fee2e2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .date-section { break-inside: avoid; }
   }
 </style>
@@ -301,38 +315,33 @@
               <th style="width:90px">Jam Jadwal</th>
               <th style="width:130px">Mata Pelajaran</th>
               <th style="width:100px">Kelas</th>
-              <th style="width:85px">Jam Masuk</th>
-              <th style="width:85px">Jam Keluar</th>
-              <th style="width:90px">Status</th>
               <th>Materi</th>
               <th style="width:150px">Catatan</th>
+              <th style="width:110px">Waktu Input</th>
             </tr>
           </thead>
           <tbody>
             @foreach($hari['entries'] as $entry)
-            @php $j = $entry['jadwal']; $jLast = $entry['lastJadwal'] ?? $j; $jr = $entry['jurnal']; $jumlahJam = $entry['jumlahJam'] ?? 1; @endphp
+            @php
+              $j = $entry['jadwal']; $jLast = $entry['lastJadwal'] ?? $j; $jr = $entry['jurnal']; $jumlahJam = $entry['jumlahJam'] ?? 1;
+              $dalamJam = $jr ? $jr->isInputDalamJamMengajar() : false;
+            @endphp
             <tr class="{{ $jr ? '' : 'row-missing' }}">
               <td class="td-jam">{{ substr($j->jamPelajaran->jam_mulai,0,5) }}&ndash;{{ substr($jLast->jamPelajaran->jam_selesai,0,5) }}@if($jumlahJam > 1) <span style="font-size:9px;font-weight:normal;color:#94a3b8">({{ $jumlahJam }}jp)</span>@endif</td>
               <td class="td-mapel">{{ $j->mapel->nama }}</td>
               <td class="td-kelas">Kelas {{ $j->kelas->nama }}</td>
               @if($jr)
-              <td class="td-jam-aktual">{{ $jr->jam_masuk_aktual ? substr($jr->jam_masuk_aktual,0,5) : '—' }}</td>
-              <td class="td-jam-aktual">{{ $jr->jam_keluar_aktual ? substr($jr->jam_keluar_aktual,0,5) : '—' }}</td>
-              <td class="td-status">
-                @if($jr->is_terlambat)
-                <span class="badge-late">&#9888; Terlambat +{{ $jr->menit_terlambat }} mnt</span>
-                @else
-                <span class="badge-ok">&#10003; Tepat Waktu</span>
-                @endif
-              </td>
               <td class="td-materi">{{ $jr->materi ?: '—' }}</td>
               <td class="td-catatan">{{ $jr->catatan ?: '—' }}</td>
+              <td class="td-waktu-input">
+                <span class="{{ $dalamJam ? 'badge-input-ok' : 'badge-input-late' }}">
+                  {{ $jr->created_at->translatedFormat('d/m/Y H:i') }}
+                </span>
+              </td>
               @else
-              <td class="td-jam-aktual" style="color:#94a3b8">—</td>
-              <td class="td-jam-aktual" style="color:#94a3b8">—</td>
-              <td class="td-status"><span class="badge-missing">&#10007; Tidak Diisi</span></td>
               <td class="td-materi"><span class="missing-note">Guru tidak mengisi jurnal pada jam mengajar ini</span></td>
               <td class="td-catatan" style="color:#94a3b8">—</td>
+              <td class="td-waktu-input" style="color:#94a3b8">—</td>
               @endif
             </tr>
             @endforeach

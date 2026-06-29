@@ -116,7 +116,7 @@ class TahunAjaranController extends Controller
         $tahunAjaran->jadwal()->forceDelete();
 
         $tugasMengajars = \App\Models\TugasMengajar::where('tahun_ajaran_id', $tahunAjaran->id)->get();
-        $jamPelajarans  = \App\Models\JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get();
+        $jamPelajarans  = \App\Models\JamPelajaran::where('is_istirahat', false)->orderBy('hari')->orderBy('jam_mulai')->get();
 
         if ($tugasMengajars->isEmpty() || $jamPelajarans->isEmpty()) {
             return response()->json(['message' => 'Tidak ada tugas mengajar atau jam pelajaran yang tersedia.', 'gagal' => 0]);

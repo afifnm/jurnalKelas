@@ -17,13 +17,11 @@ class StoreJurnalRequest extends FormRequest
             'jadwal_id'             => ['nullable', 'exists:jadwal,id'],
             'kelas_id'              => ['required', 'exists:kelas,id'],
             'mapel_id'              => ['required', 'exists:mapel,id'],
-            'tanggal'               => ['required', 'date', 'before_or_equal:today'],
-            'jam_masuk_aktual'      => ['required', 'date_format:H:i'],
-            'jam_keluar_aktual'     => ['nullable', 'date_format:H:i', 'after:jam_masuk_aktual'],
+            'tanggal'               => ['required', 'date', 'date_equals:today'],
             'materi'                => ['required', 'string', 'max:2000'],
             'catatan'               => ['nullable', 'string', 'max:1000'],
             'lampiran'              => ['nullable', 'array', 'max:5'],
-            'lampiran.*'            => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'lampiran.*'            => ['image', 'mimes:jpg,jpeg,png,webp'],
             'keterangan_lampiran'   => ['nullable', 'array'],
             'keterangan_lampiran.*' => ['nullable', 'string', 'max:200'],
         ];
@@ -32,9 +30,9 @@ class StoreJurnalRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'tanggal.before_or_equal' => 'Tanggal jurnal tidak boleh lebih dari hari ini.',
-            'jam_masuk_aktual.required' => 'Jam masuk aktual wajib diisi.',
-            'materi.required' => 'Materi pembelajaran wajib diisi.',
+            'tanggal.date_equals' => 'Jurnal hanya bisa diisi untuk hari ini.',
+            'materi.required'     => 'Materi pembelajaran wajib diisi.',
+            'lampiran.*.uploaded' => 'Gagal mengupload foto. Mungkin file terlalu besar untuk diterima oleh server atau format tidak didukung.',
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Guru;
 
 use App\Http\Controllers\Controller;
+use App\Models\JamPelajaran;
 use App\Models\Jadwal;
 use App\Models\Jurnal;
 use App\Models\Kelas;
@@ -37,7 +38,7 @@ class JadwalViewController extends Controller
             ->whereIn('kelas_id', $kelasList->pluck('id'))
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
             ->orderBy('jam_pelajaran.hari')
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get()
             ->groupBy('kelas_id');
 
@@ -50,11 +51,12 @@ class JadwalViewController extends Controller
             ];
         }
 
-        $waktuIni = now()->format('H:i:s');
+        $waktuIni     = now()->format('H:i:s');
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_mulai')->get();
 
         return view('jadwal.by-kelas', compact(
             'tahunAjaran', 'tahunAktif', 'kelasList', 'namaHari',
-            'jadwalPerKelas', 'tahunId', 'kelasId', 'hariIni', 'waktuIni'
+            'jadwalPerKelas', 'tahunId', 'kelasId', 'hariIni', 'waktuIni', 'jamPelajaran'
         ));
     }
 
@@ -76,7 +78,7 @@ class JadwalViewController extends Controller
             ->whereIn('guru_id', $guruList->pluck('id'))
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
             ->orderBy('jam_pelajaran.hari')
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get()
             ->groupBy('guru_id');
 
@@ -98,11 +100,12 @@ class JadwalViewController extends Controller
 
         $konflikIds = [];
 
-        $waktuIni = now()->format('H:i:s');
+        $waktuIni     = now()->format('H:i:s');
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_mulai')->get();
 
         return view('jadwal.by-guru', compact(
             'guru', 'tahunAjaran', 'tahunAktif', 'guruList', 'namaHari', 'hariIni', 'waktuIni',
-            'jadwalPerGuru', 'tahunId', 'guruId', 'konflikIds', 'sudahDiisiHariIni'
+            'jadwalPerGuru', 'tahunId', 'guruId', 'konflikIds', 'sudahDiisiHariIni', 'jamPelajaran'
         ));
     }
 
@@ -119,12 +122,12 @@ class JadwalViewController extends Controller
             ->where('guru_id', $guru->id)
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
             ->orderBy('jam_pelajaran.hari')
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get()
             ->filter(fn($j) => $j->jamPelajaran !== null)
             ->groupBy(fn($j) => $j->jamPelajaran->hari);
 
-        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get()->groupBy('hari');
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_mulai')->get()->groupBy('hari');
 
         return view('admin.jadwal.print.guru', compact('sekolah', 'tahunAktif', 'guru', 'jadwal', 'namaHari', 'jamPelajaran'));
     }
@@ -144,7 +147,7 @@ class JadwalViewController extends Controller
             ->with(['kelas', 'mapel', 'jamPelajaran'])
             ->where('guru_id', $guru->id)
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get();
 
         $allJurnal = Jurnal::where('guru_id', $guru->id)
@@ -182,8 +185,8 @@ class JadwalViewController extends Controller
             $current->addDay();
         }
 
-        $totalSesi   = collect($laporan)->sum(fn($d) => count($d['entries']));
-        $totalDiisi  = collect($laporan)->sum(fn($d) => collect($d['entries'])->filter(fn($e) => $e['jurnal'])->count());
+        $totalSesi   = collect($laporan)->sum(fn($d) => collect($d['entries'])->sum('jumlahJam'));
+        $totalDiisi  = collect($laporan)->sum(fn($d) => collect($d['entries'])->filter(fn($e) => $e['jurnal'])->sum('jumlahJam'));
         $totalKosong = $totalSesi - $totalDiisi;
 
         return view('admin.jadwal.print.laporan-jurnal-guru', compact(
@@ -205,12 +208,12 @@ class JadwalViewController extends Controller
             ->where('kelas_id', $kelas->id)
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
             ->orderBy('jam_pelajaran.hari')
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get()
             ->filter(fn($j) => $j->jamPelajaran !== null)
             ->groupBy(fn($j) => $j->jamPelajaran->hari);
 
-        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get()->groupBy('hari');
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_mulai')->get()->groupBy('hari');
 
         return view('admin.jadwal.print.kelas', compact('sekolah', 'tahunAktif', 'kelas', 'jadwal', 'namaHari', 'jamPelajaran'));
     }
@@ -230,7 +233,7 @@ class JadwalViewController extends Controller
             ->with(['guru', 'mapel', 'jamPelajaran'])
             ->where('kelas_id', $kelas->id)
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get();
 
         $allJurnal = \App\Models\Jurnal::where('kelas_id', $kelas->id)
@@ -268,8 +271,8 @@ class JadwalViewController extends Controller
             $current->addDay();
         }
 
-        $totalSesi    = collect($laporan)->sum(fn($d) => count($d['entries']));
-        $totalDiisi   = collect($laporan)->sum(fn($d) => collect($d['entries'])->filter(fn($e) => $e['jurnal'])->count());
+        $totalSesi    = collect($laporan)->sum(fn($d) => collect($d['entries'])->sum('jumlahJam'));
+        $totalDiisi   = collect($laporan)->sum(fn($d) => collect($d['entries'])->filter(fn($e) => $e['jurnal'])->sum('jumlahJam'));
         $totalKosong  = $totalSesi - $totalDiisi;
 
         return view('admin.jadwal.print.laporan-jurnal-kelas', compact(

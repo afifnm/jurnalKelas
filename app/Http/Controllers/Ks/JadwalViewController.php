@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\GuruJabatanKhusus;
 use App\Models\JamPelajaran;
 use App\Models\Jadwal;
+use App\Models\Jurnal;
 use App\Models\Kelas;
 use App\Models\Sekolah;
 use App\Models\TahunAjaran;
 use App\Models\TugasMengajar;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -34,7 +36,7 @@ class JadwalViewController extends Controller
             ->whereIn('kelas_id', $kelasList->pluck('id'))
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
             ->orderBy('jam_pelajaran.hari')
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get()
             ->groupBy('kelas_id');
 
@@ -47,9 +49,11 @@ class JadwalViewController extends Controller
             ];
         }
 
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_mulai')->get();
+
         return view('jadwal.by-kelas', compact(
             'tahunAjaran', 'tahunAktif', 'kelasList', 'namaHari',
-            'jadwalPerKelas', 'tahunId', 'kelasId', 'hariIni', 'waktuIni'
+            'jadwalPerKelas', 'tahunId', 'kelasId', 'hariIni', 'waktuIni', 'jamPelajaran'
         ));
     }
 
@@ -71,7 +75,7 @@ class JadwalViewController extends Controller
             ->whereIn('guru_id', $guruList->pluck('id'))
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
             ->orderBy('jam_pelajaran.hari')
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get()
             ->groupBy('guru_id');
 
@@ -84,9 +88,11 @@ class JadwalViewController extends Controller
             ];
         }
 
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_mulai')->get();
+
         return view('jadwal.by-guru', compact(
             'tahunAjaran', 'tahunAktif', 'guruList', 'namaHari',
-            'jadwalPerGuru', 'tahunId', 'guruId', 'hariIni', 'waktuIni'
+            'jadwalPerGuru', 'tahunId', 'guruId', 'hariIni', 'waktuIni', 'jamPelajaran'
         ));
     }
 
@@ -102,7 +108,7 @@ class JadwalViewController extends Controller
             ->with(['guru', 'mapel', 'kelas', 'jamPelajaran'])
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
             ->orderBy('jam_pelajaran.hari')
-            ->orderBy('jam_pelajaran.jam_ke')
+            ->orderBy('jam_pelajaran.jam_mulai')
             ->get();
 
         $kelasList = Kelas::orderBy('nama')
@@ -118,11 +124,137 @@ class JadwalViewController extends Controller
 
         $mapelUsed    = $allJadwal->pluck('mapel')->unique('id')->sortBy('nama')->values();
         $guruUsed     = $allJadwal->pluck('guru')->unique('id')->sortBy('username')->values();
-        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get()->groupBy('hari');
+        $jamPelajaran = JamPelajaran::orderBy('hari')->orderBy('jam_mulai')->get()->groupBy('hari');
 
         return view('admin.jadwal.print.semua', compact(
             'sekolah', 'tahunAktif', 'namaHari',
             'kelasList', 'jadwalByHari', 'mapelUsed', 'guruUsed', 'jamPelajaran'
+        ));
+    }
+
+    public function laporanJurnalGuru(Request $request, User $guru): View
+    {
+        $tahunId    = $request->tahun_ajaran_id ?? TahunAjaran::aktif()?->id;
+        $sekolah    = Sekolah::first();
+        $tahunAktif = TahunAjaran::find($tahunId);
+        $namaHari   = Jadwal::getNamaHariList();
+
+        $dari   = $request->tanggal_dari   ? Carbon::parse($request->tanggal_dari)   : now()->startOfWeek();
+        $sampai = $request->tanggal_sampai ? Carbon::parse($request->tanggal_sampai) : now()->endOfWeek();
+
+        $allJadwal = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['kelas', 'mapel', 'jamPelajaran'])
+            ->where('guru_id', $guru->id)
+            ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
+            ->orderBy('jam_pelajaran.jam_mulai')
+            ->get();
+
+        $allJurnal = Jurnal::where('guru_id', $guru->id)
+            ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
+            ->with(['kelas', 'mapel'])
+            ->get();
+
+        $jurnalByJadwal   = $allJurnal->groupBy(fn($j) => $j->jadwal_id . '|' . $j->tanggal->format('Y-m-d'));
+        $jurnalByFallback = $allJurnal->groupBy(fn($j) => $j->kelas_id . '|' . $j->mapel_id . '|' . $j->tanggal->format('Y-m-d'));
+
+        $grupPerHari = Jadwal::grupkanBerurutan($allJadwal)->groupBy(fn($g) => $g['jadwal']->first()->jamPelajaran->hari);
+
+        $laporan = [];
+        $current = $dari->copy()->startOfDay();
+        $end     = $sampai->copy()->startOfDay();
+
+        while ($current->lte($end)) {
+            $hariNum = $current->dayOfWeekIso;
+            $grups   = $grupPerHari->get($hariNum, collect());
+
+            if ($grups->isNotEmpty()) {
+                $entries = [];
+                foreach ($grups as $grup) {
+                    $firstJadwal = $grup['jadwal']->first();
+                    $lastJadwal  = $grup['jadwal']->last();
+                    $key   = $firstJadwal->id . '|' . $current->format('Y-m-d');
+                    $fbKey = $firstJadwal->kelas_id . '|' . $firstJadwal->mapel_id . '|' . $current->format('Y-m-d');
+                    $jurnal = $jurnalByJadwal->get($key)?->first()
+                        ?? $jurnalByFallback->get($fbKey)?->first();
+
+                    $entries[] = ['jadwal' => $firstJadwal, 'lastJadwal' => $lastJadwal, 'jumlahJam' => count($grup['ids']), 'jurnal' => $jurnal];
+                }
+                $laporan[] = ['tanggal' => $current->copy(), 'hari' => $hariNum, 'entries' => $entries];
+            }
+            $current->addDay();
+        }
+
+        $totalSesi   = collect($laporan)->sum(fn($d) => collect($d['entries'])->sum('jumlahJam'));
+        $totalDiisi  = collect($laporan)->sum(fn($d) => collect($d['entries'])->filter(fn($e) => $e['jurnal'])->sum('jumlahJam'));
+        $totalKosong = $totalSesi - $totalDiisi;
+
+        return view('admin.jadwal.print.laporan-jurnal-guru', compact(
+            'sekolah', 'tahunAktif', 'guru', 'laporan', 'namaHari',
+            'dari', 'sampai', 'totalSesi', 'totalDiisi', 'totalKosong'
+        ));
+    }
+
+    public function laporanJurnalKelas(Request $request, Kelas $kelas): View
+    {
+        $tahunId    = $request->tahun_ajaran_id ?? TahunAjaran::aktif()?->id;
+        $sekolah    = Sekolah::first();
+        $tahunAktif = TahunAjaran::find($tahunId);
+        $namaHari   = Jadwal::getNamaHariList();
+
+        $dari   = $request->tanggal_dari   ? Carbon::parse($request->tanggal_dari)   : now()->startOfWeek();
+        $sampai = $request->tanggal_sampai ? Carbon::parse($request->tanggal_sampai) : now()->endOfWeek();
+
+        $allJadwal = Jadwal::select('jadwal.*')
+            ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
+            ->with(['guru', 'mapel', 'jamPelajaran'])
+            ->where('kelas_id', $kelas->id)
+            ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
+            ->orderBy('jam_pelajaran.jam_mulai')
+            ->get();
+
+        $allJurnal = Jurnal::where('kelas_id', $kelas->id)
+            ->whereBetween('tanggal', [$dari->toDateString(), $sampai->toDateString()])
+            ->with(['guru', 'mapel'])
+            ->get();
+
+        $jurnalByJadwal   = $allJurnal->groupBy(fn($j) => $j->jadwal_id . '|' . $j->tanggal->format('Y-m-d'));
+        $jurnalByFallback = $allJurnal->groupBy(fn($j) => $j->guru_id . '|' . $j->mapel_id . '|' . $j->tanggal->format('Y-m-d'));
+
+        $grupPerHari = Jadwal::grupkanBerurutan($allJadwal)->groupBy(fn($g) => $g['jadwal']->first()->jamPelajaran->hari);
+
+        $laporan = [];
+        $current = $dari->copy()->startOfDay();
+        $end     = $sampai->copy()->startOfDay();
+
+        while ($current->lte($end)) {
+            $hariNum = $current->dayOfWeekIso;
+            $grups   = $grupPerHari->get($hariNum, collect());
+
+            if ($grups->isNotEmpty()) {
+                $entries = [];
+                foreach ($grups as $grup) {
+                    $firstJadwal = $grup['jadwal']->first();
+                    $lastJadwal  = $grup['jadwal']->last();
+                    $key   = $firstJadwal->id . '|' . $current->format('Y-m-d');
+                    $fbKey = $firstJadwal->guru_id . '|' . $firstJadwal->mapel_id . '|' . $current->format('Y-m-d');
+                    $jurnal = $jurnalByJadwal->get($key)?->first()
+                        ?? $jurnalByFallback->get($fbKey)?->first();
+
+                    $entries[] = ['jadwal' => $firstJadwal, 'lastJadwal' => $lastJadwal, 'jumlahJam' => count($grup['ids']), 'jurnal' => $jurnal];
+                }
+                $laporan[] = ['tanggal' => $current->copy(), 'hari' => $hariNum, 'entries' => $entries];
+            }
+            $current->addDay();
+        }
+
+        $totalSesi    = collect($laporan)->sum(fn($d) => collect($d['entries'])->sum('jumlahJam'));
+        $totalDiisi   = collect($laporan)->sum(fn($d) => collect($d['entries'])->filter(fn($e) => $e['jurnal'])->sum('jumlahJam'));
+        $totalKosong  = $totalSesi - $totalDiisi;
+
+        return view('admin.jadwal.print.laporan-jurnal-kelas', compact(
+            'sekolah', 'tahunAktif', 'kelas', 'laporan', 'namaHari',
+            'dari', 'sampai', 'totalSesi', 'totalDiisi', 'totalKosong'
         ));
     }
 

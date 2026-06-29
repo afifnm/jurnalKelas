@@ -87,26 +87,30 @@
                 <div class="flex items-start justify-between gap-3 mb-2">
                     <div class="flex items-center gap-2 flex-1 min-w-0">
                         <div class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 text-xs font-bold flex-shrink-0">
-                            {{ strtoupper(substr($j->guru->nama, 0, 1)) }}
+                            {{ $j->guru->username }}
                         </div>
                         <div class="min-w-0">
-                            <p class="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate">{{ $j->guru->nama }}</p>
-                            <p class="text-xs text-slate-400">{{ $j->kelas->nama }} · {{ $j->mapel->nama }}</p>
+                            <p class="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate">
+                                <a href="{{ route('admin.jadwal.by-guru', ['guru_id' => $j->guru->id]) }}" class="hover:underline hover:text-blue-600">{{ $j->guru->nama }}</a>
+                            </p>
+                            <p class="text-xs text-slate-400">
+                                <a href="{{ route('admin.jadwal.index', ['kelas_id' => $j->kelas->id]) }}" class="hover:underline hover:text-blue-600">{{ $j->kelas->nama }}</a> · {{ $j->mapel->nama }}
+                            </p>
                         </div>
                     </div>
-                    @if($j->is_terlambat)
-                    <span class="badge bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 flex-shrink-0">
-                        <i data-lucide="clock-alert" class="w-3 h-3"></i> +{{ $j->menit_terlambat }} mnt
+                    @if($j->isInputDalamJamMengajar())
+                    <span class="badge badge-validated flex-shrink-0">
+                        <i data-lucide="clock-check" class="w-3 h-3"></i> Dalam jam
                     </span>
                     @else
-                    <span class="badge badge-validated flex-shrink-0">
-                        <i data-lucide="clock-check" class="w-3 h-3"></i> Tepat
+                    <span class="badge bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 flex-shrink-0">
+                        <i data-lucide="clock-alert" class="w-3 h-3"></i> Di luar jam
                     </span>
                     @endif
                 </div>
                 <p class="text-xs text-slate-500 dark:text-zinc-400 mb-1.5">
                     {{ $j->tanggal->translatedFormat('l, j F Y') }}
-                    @if($j->jam_masuk_aktual) · <span class="font-mono">{{ substr($j->jam_masuk_aktual, 0, 5) }}</span>@endif
+                    · <span class="font-mono">{{ $j->created_at->format('H:i') }}</span>
                 </p>
                 <p class="text-xs text-slate-600 dark:text-zinc-400 line-clamp-2 mb-3">{{ $j->materi }}</p>
                 <div class="flex items-center justify-between">
@@ -154,27 +158,31 @@
                         <td class="px-4 py-3.5">
                             <div class="flex items-center gap-2">
                                 <div class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400 text-xs font-bold flex-shrink-0">
-                                    {{ strtoupper(substr($j->guru->nama, 0, 1)) }}
+                                    {{ $j->guru->username }}
                                 </div>
-                                <span class="font-medium text-slate-700 dark:text-slate-200">{{ $j->guru->nama }}</span>
+                                <span class="font-medium text-slate-700 dark:text-slate-200">
+                                    <a href="{{ route('admin.jadwal.by-guru', ['guru_id' => $j->guru->id]) }}" class="hover:underline hover:text-blue-600">{{ $j->guru->nama }}</a>
+                                </span>
                             </div>
                         </td>
                         <td class="px-4 py-3.5">
-                            <p class="font-medium text-slate-700 dark:text-slate-200">{{ $j->kelas->nama }}</p>
+                            <p class="font-medium text-slate-700 dark:text-slate-200">
+                                <a href="{{ route('admin.jadwal.index', ['kelas_id' => $j->kelas->id]) }}" class="hover:underline hover:text-blue-600">{{ $j->kelas->nama }}</a>
+                            </p>
                             <p class="text-xs text-slate-400">{{ $j->mapel->nama }}</p>
                         </td>
                         <td class="px-4 py-3.5">
                             <p class="font-semibold text-slate-700 dark:text-slate-200">{{ $j->tanggal->translatedFormat('l, j F Y') }}</p>
-                            <p class="text-xs text-slate-400">{{ $j->jam_masuk_aktual ? substr($j->jam_masuk_aktual, 0, 5) : '-' }}</p>
+                            <p class="text-xs text-slate-400 font-mono">{{ $j->created_at->format('H:i') }}</p>
                         </td>
                         <td class="px-4 py-3.5">
-                            @if($j->is_terlambat)
-                                <span class="badge bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400">
-                                    <i data-lucide="clock-alert" class="w-3 h-3"></i> +{{ $j->menit_terlambat }} mnt
+                            @if($j->isInputDalamJamMengajar())
+                                <span class="badge badge-validated">
+                                    <i data-lucide="clock-check" class="w-3 h-3"></i> Dalam jam
                                 </span>
                             @else
-                                <span class="badge badge-validated">
-                                    <i data-lucide="clock-check" class="w-3 h-3"></i> Tepat waktu
+                                <span class="badge bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400">
+                                    <i data-lucide="clock-alert" class="w-3 h-3"></i> Di luar jam
                                 </span>
                             @endif
                         </td>
@@ -254,18 +262,8 @@
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.mapel?.nama"></p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Masuk</p>
-                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="(detailData.jam_masuk_aktual || '-').substring(0,5)"></p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Keluar</p>
-                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.jam_keluar_aktual ? detailData.jam_keluar_aktual.substring(0,5) : '-'"></p>
-                                </div>
-                                <div class="col-span-2">
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Keterlambatan</p>
-                                    <p class="font-semibold"
-                                       :class="detailData.is_terlambat ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
-                                       x-text="detailData.is_terlambat ? '+' + detailData.menit_terlambat + ' menit terlambat' : 'Tepat waktu'"></p>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Waktu Input</p>
+                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.created_at ? detailData.created_at.substring(0,16).replace('T',' ') : '-'"></p>
                                 </div>
                             </div>
 

@@ -28,7 +28,7 @@ class JadwalController extends Controller
             $query->where('tahun_ajaran_id', $ta);
         }
 
-        $jadwal       = $query->orderBy('jam_pelajaran.hari')->orderBy('jam_pelajaran.jam_ke')->paginate(20)->withQueryString();
+        $jadwal       = $query->orderBy('jam_pelajaran.hari')->orderBy('jam_pelajaran.jam_mulai')->paginate(20)->withQueryString();
         $guru         = User::role('guru')->orderBy('nama')->get();
         $kelas        = Kelas::orderBy('nama')->get();
         $mapel        = Mapel::orderBy('nama')->get();

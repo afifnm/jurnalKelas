@@ -17,7 +17,7 @@ class JurnalController extends Controller
     {
         $tahunAktif = TahunAjaran::aktif();
 
-        $query = Jurnal::with(['guru', 'kelas', 'mapel', 'lampiran'])
+        $query = Jurnal::with(['guru', 'kelas', 'mapel', 'lampiran', 'jadwal.jamPelajaran'])
             ->join('users as guru_user', 'jurnal.guru_id', '=', 'guru_user.id')
             ->select('jurnal.*')
             ->when($tahunAktif, fn($q) => $q->where('jurnal.tahun_ajaran_id', $tahunAktif->id));
@@ -47,15 +47,33 @@ class JurnalController extends Controller
             }
         }
 
-        $jurnal = $query->orderByDesc('jurnal.tanggal')->orderBy('guru_user.nama')->paginate(25)->withQueryString();
-        $guru   = User::role('guru')->orderBy('nama')->get();
-        $kelas  = Kelas::orderBy('nama')->get();
+        $jurnal     = $query->orderByDesc('jurnal.tanggal')->orderBy('guru_user.nama')->paginate(25)->withQueryString();
+        $guru       = User::role('guru')->orderBy('nama')->get();
+        $kelas      = Kelas::orderBy('nama')->get();
+        $jamSesiMap = Jurnal::buildJamSesiMap($jurnal);
 
-        return view('admin.jurnal.index', compact('jurnal', 'guru', 'kelas', 'tahunAktif'));
+        return view('admin.jurnal.index', [
+            'jurnal'         => $jurnal,
+            'jamSesiMap'     => $jamSesiMap,
+            'guru'           => $guru,
+            'kelas'          => $kelas,
+            'tahunAktif'     => $tahunAktif,
+            'canCreate'      => false,
+            'canEdit'        => false,
+            'breadcrumbRole' => 'Admin',
+            'headerDesc'     => 'Semua jurnal mengajar',
+            'indexRoute'     => route('admin.jurnal.index'),
+            'showRouteBase'  => '/admin/jurnal',
+        ]);
     }
 
     public function show(Jurnal $jurnal): JsonResponse
     {
-        return response()->json($jurnal->load(['guru', 'kelas', 'mapel', 'jadwal', 'lampiran']));
+        $jurnal->load(['guru', 'kelas', 'mapel', 'jadwal.jamPelajaran', 'lampiran']);
+        $sesi = Jurnal::buildJamSesiMap(collect([$jurnal]));
+        $data = $jurnal->toArray();
+        $data['jam_sesi'] = $sesi[$jurnal->id] ?? null;
+        $data['dalam_jam'] = $jurnal->isInputDalamJamMengajar();
+        return response()->json($data);
     }
 }

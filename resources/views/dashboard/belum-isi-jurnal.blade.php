@@ -1,10 +1,14 @@
 @extends('layouts.app')
 @section('title', 'Belum Isi Jurnal')
 @section('page-title', 'Belum Isi Jurnal')
+@php
+$roleName = auth()->user()->hasRole('admin') ? 'Admin' : 'Kepala Sekolah';
+$rolePrefix = auth()->user()->hasRole('admin') ? 'admin.' : 'ks.';
+@endphp
 @section('breadcrumb')
-    <i data-lucide="home" class="w-3 h-3"></i><span>Kepala Sekolah</span>
+    <i data-lucide="home" class="w-3 h-3"></i><span>{{ $roleName }}</span>
     <i data-lucide="chevron-right" class="w-3 h-3"></i>
-    <a href="{{ route('ks.dashboard') }}" class="hover:underline">Dashboard</a>
+    <a href="{{ route($rolePrefix . 'dashboard') }}" class="hover:underline">Dashboard</a>
     <i data-lucide="chevron-right" class="w-3 h-3"></i>
     <span class="text-slate-700 dark:text-zinc-200 font-medium">Belum Isi Jurnal</span>
 @endsection
@@ -22,7 +26,7 @@
             @endif
         </p>
     </div>
-    <a href="{{ route('ks.dashboard') }}"
+    <a href="{{ route($rolePrefix . 'dashboard') }}"
        class="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors">
         <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
         Kembali
@@ -38,15 +42,21 @@
 @else
 <div class="space-y-3">
     @foreach($belumIsiHariIni as $i => $guru)
-    @php $jadwalGuru = $jadwalBelumIsi->get($guru->id, collect())->sortBy(fn($j) => $j->jamPelajaran?->jam_ke); @endphp
+    @php $jadwalGuru = $jadwalBelumIsi->get($guru->id, collect())->sortBy(fn($j) => $j->jamPelajaran?->jam_mulai); @endphp
     <div class="card overflow-hidden">
         {{-- Header guru --}}
         <div class="flex items-center gap-4 px-5 py-4 bg-red-50/60 dark:bg-red-950/20 border-b border-red-100 dark:border-red-900/30">
             <div class="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-950/40 flex items-center justify-center text-red-600 dark:text-red-400 text-sm font-bold flex-shrink-0">
-                {{ strtoupper(substr($guru->nama, 0, 1)) }}
+                {{ $guru->username }}
             </div>
             <div class="flex-1 min-w-0">
-                <p class="font-semibold text-sm text-slate-800 dark:text-white">{{ $guru->nama }}</p>
+                @php
+                    $jadwalGuruRoute = auth()->user()->hasRole('admin') ? 'admin.jadwal.by-guru' : (auth()->user()->hasRole('ks') ? 'ks.jadwal.by-guru' : 'guru.jadwal.index');
+                    $jadwalKelasRoute = auth()->user()->hasRole('admin') ? 'admin.jadwal.index' : (auth()->user()->hasRole('ks') ? 'ks.jadwal.by-kelas' : 'guru.jadwal.by-kelas');
+                @endphp
+                <p class="font-semibold text-sm text-slate-800 dark:text-white">
+                    <a href="{{ route($jadwalGuruRoute, ['guru_id' => $guru->id]) }}" class="hover:underline hover:text-blue-600">{{ $guru->nama }}</a>
+                </p>
                 <p class="text-[10px] text-slate-500 dark:text-zinc-400">{{ $guru->username }} &middot; {{ $jadwalGuru->count() }} sesi belum diisi</p>
             </div>
             <span class="text-[10px] px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 font-semibold flex-shrink-0">
@@ -80,7 +90,7 @@
                     </td>
                     <td class="px-5 py-2.5">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 text-[10px] font-semibold">
-                            {{ $j->kelas->nama }}
+                            <a href="{{ route($jadwalKelasRoute, ['kelas_id' => $j->kelas->id]) }}" class="hover:underline">{{ $j->kelas->nama }}</a>
                         </span>
                     </td>
                     <td class="px-5 py-2.5 font-mono font-semibold text-slate-600 dark:text-zinc-300">

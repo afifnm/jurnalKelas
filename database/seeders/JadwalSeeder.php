@@ -242,7 +242,7 @@ class JadwalSeeder extends Seeder
             return;
         }
 
-        $jam = JamPelajaran::orderBy('hari')->orderBy('jam_ke')->get();
+        $jam = JamPelajaran::orderBy('hari')->orderBy('jam_mulai')->get();
         if ($jam->isEmpty()) {
             Log::warning('JadwalSeeder: tidak ada jam pelajaran, dilewati.');
             return;

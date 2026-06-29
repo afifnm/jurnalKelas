@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
                     ->where('guru_id', $user->id)
                     ->where('jam_pelajaran.hari', $hariIni)
                     ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
-                    ->orderBy('jam_pelajaran.jam_ke')
+                    ->orderBy('jam_pelajaran.jam_mulai')
                     ->get();
 
                 $sudahDiisi = Jurnal::where('guru_id', $user->id)
@@ -43,13 +43,17 @@ class AppServiceProvider extends ServiceProvider
                     ->pluck('jadwal_id')
                     ->toArray();
 
-                $belumDiisi = $jadwalHariIni->filter(fn($j) => ! in_array($j->id, $sudahDiisi));
-                $count      = $belumDiisi->count();
+                $grupBelumDiisi = Jadwal::grupkanBerurutan($jadwalHariIni)
+                    ->filter(fn($grup) => count(array_intersect($grup['ids'], $sudahDiisi)) === 0);
 
-                foreach ($belumDiisi as $j) {
+                $count = $grupBelumDiisi->count();
+
+                foreach ($grupBelumDiisi as $grup) {
+                    $first = $grup['jadwal']->first();
+                    $last  = $grup['jadwal']->last();
                     $items[] = [
-                        'text'  => substr($j->jamPelajaran->jam_mulai, 0, 5) . ' — ' . $j->mapel->nama . ' (' . $j->kelas->nama . ')',
-                        'route' => route('guru.jurnal.create', ['jadwal_id' => $j->id]),
+                        'text'  => substr($first->jamPelajaran->jam_mulai, 0, 5) . '–' . substr($last->jamPelajaran->jam_selesai, 0, 5) . ' — ' . $first->mapel->nama . ' (' . $first->kelas->nama . ')',
+                        'route' => route('guru.jurnal.create', ['jadwal_id' => $first->id]),
                     ];
                 }
 

@@ -143,7 +143,7 @@
                     <h4 class="text-xs font-bold text-slate-700 dark:text-white mb-2.5 flex items-center gap-2 bg-slate-50 dark:bg-zinc-800/60 py-2 px-3 rounded-lg">
                         <div class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0"></div>
                         {{ $hariNama }}
-                        <span class="ml-auto text-[10px] font-normal text-slate-400">{{ $slots->count() }} jam</span>
+                        <span class="ml-auto text-[10px] font-normal text-slate-400">{{ $slots->where('is_istirahat', false)->count() }} jam · {{ $slots->where('is_istirahat', true)->count() }} istirahat</span>
                     </h4>
 
                     {{-- Responsive grid: 2 col mobile → 3 col md → 4 col xl --}}
@@ -155,6 +155,21 @@
                                 $slotKey = $slot->id;
                             @endphp
 
+                            @if($slot->is_istirahat)
+                            {{-- Slot Istirahat (non-droppable) --}}
+                            <div class="relative rounded-xl border-2 border-dashed border-sky-200 dark:border-sky-800/50 bg-sky-50/60 dark:bg-sky-950/20">
+                                <div class="px-2 sm:px-3 py-1.5 flex items-center justify-between border-b border-sky-100/60 dark:border-sky-800/30">
+                                    <span class="text-[9px] sm:text-[10px] font-bold text-sky-400 dark:text-sky-600 flex items-center gap-1">
+                                        <i data-lucide="coffee" class="w-3 h-3"></i> Istirahat
+                                    </span>
+                                    <span class="text-[9px] sm:text-[10px] font-mono text-sky-500 dark:text-sky-500 tabular-nums">{{ $mulai }}</span>
+                                </div>
+                                <div class="p-1.5 sm:p-2 min-h-[4.5rem] flex flex-col items-center justify-center">
+                                    <p class="text-[10px] text-sky-400 dark:text-sky-600 font-mono text-center">{{ $mulai }} – {{ $selesai }}</p>
+                                    <p class="text-[9px] text-sky-300 dark:text-sky-700 mt-0.5">Tidak ada jadwal</p>
+                                </div>
+                            </div>
+                            @else
                             {{-- Drop Zone --}}
                             <div class="relative rounded-xl border-2 transition-all duration-200"
                                  :class="getSlotClass('{{ $slotKey }}')"
@@ -210,6 +225,7 @@
 
                                 </div>
                             </div>
+                            @endif
                         @endforeach
                     </div>
                 </div>

@@ -52,19 +52,18 @@ class HitungMetrikJurnal extends Command
 
             $jurnal = Jurnal::where('guru_id', $g->id)
                 ->whereBetween('tanggal', [$awal, $akhir])
-                ->whereIn('status', ['submitted', 'validated'])
+                ->with(['jadwal.jamPelajaran'])
                 ->get();
 
-            $totalTerisi     = $jurnal->count();
-            $totalTerlambat  = $jurnal->where('is_terlambat', true)->count();
-            $totalValidated  = $jurnal->where('status', 'validated')->count();
-            $avgTerlambat    = $jurnal->where('is_terlambat', true)->avg('menit_terlambat') ?? 0;
+            $totalTerisi    = $jurnal->count();
+            $totalDalamJam  = $jurnal->filter(fn($j) => $j->isInputDalamJamMengajar())->count();
+            $totalLuarJam   = $totalTerisi - $totalDalamJam;
 
             $kepatuhan      = $totalJadwal > 0 ? ($totalTerisi / $totalJadwal) * 100 : 0;
-            $ketepatanWaktu = $totalTerisi > 0 ? (($totalTerisi - $totalTerlambat) / $totalTerisi) * 100 : 0;
-            $rasioValidasi  = $totalTerisi > 0 ? ($totalValidated / $totalTerisi) * 100 : 0;
+            $ketepatanWaktu = $totalTerisi > 0 ? ($totalDalamJam / $totalTerisi) * 100 : 0;
+            $rasioValidasi  = 0;
 
-            $skor = ($kepatuhan * 0.5) + ($ketepatanWaktu * 0.3) + ($rasioValidasi * 0.2);
+            $skor = ($kepatuhan * 0.5) + ($ketepatanWaktu * 0.3);
 
             KinerjaGuru::updateOrCreate(
                 ['guru_id' => $g->id, 'periode' => $periode],
@@ -72,9 +71,9 @@ class HitungMetrikJurnal extends Command
                     'total_jadwal'             => max($totalJadwal, 0),
                     'total_terisi'             => $totalTerisi,
                     'persen_kepatuhan'         => round($kepatuhan, 2),
-                    'total_terlambat'          => $totalTerlambat,
-                    'rata_keterlambatan_menit' => round($avgTerlambat, 2),
-                    'total_validated'          => $totalValidated,
+                    'total_terlambat'          => $totalLuarJam,
+                    'rata_keterlambatan_menit' => 0,
+                    'total_validated'          => 0,
                     'skor_kinerja'             => round($skor, 2),
                 ]
             );

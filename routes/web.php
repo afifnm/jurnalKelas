@@ -38,6 +38,8 @@ Route::get('/lampiran/{path}', function (string $path) {
 // --- ADMIN ---
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/dashboard',  [Admin\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/mengajar-sekarang', [Admin\DashboardController::class, 'mengajarSekarang'])->name('dashboard.mengajar-sekarang');
+    Route::get('/dashboard/belum-isi-jurnal',  [Admin\DashboardController::class, 'belumIsiJurnal'])->name('dashboard.belum-isi-jurnal');
 
     Route::post('users/import',  [Admin\UserController::class, 'import'])->name('users.import');
     Route::get('users/template', [ImportTemplateController::class, 'pengguna'])->name('users.import.template');
@@ -123,4 +125,6 @@ Route::prefix('ks')->name('ks.')->middleware(['auth', 'role:ks'])->group(functio
     Route::get('/jadwal/guru',               [KsJadwalViewController::class, 'byGuru'])->name('jadwal.by-guru');
     Route::get('/jadwal/print/semua',        [KsJadwalViewController::class, 'printSemua'])->name('jadwal.print.semua');
     Route::get('/jadwal/print/beban-mengajar', [KsJadwalViewController::class, 'printBebanMengajar'])->name('jadwal.print.beban-mengajar');
+    Route::get('/jadwal/print/laporan-jurnal-kelas/{kelas}', [KsJadwalViewController::class, 'laporanJurnalKelas'])->name('jadwal.print.laporan-jurnal-kelas');
+    Route::get('/jadwal/print/laporan-jurnal-guru/{guru}',   [KsJadwalViewController::class, 'laporanJurnalGuru'])->name('jadwal.print.laporan-jurnal-guru');
 });

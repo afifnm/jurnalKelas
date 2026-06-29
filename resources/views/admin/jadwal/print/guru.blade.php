@@ -167,6 +167,8 @@
   .td-jam { white-space: nowrap; font-family: 'Courier New', monospace; font-size: 11px; color: #b45309; font-weight: 700; width: 110px; }
   .td-mapel { font-weight: 600; }
   .td-kelas { color: #475569; }
+  tr.tr-istirahat td { background: #f0f9ff !important; color: #0369a1; font-style: italic; font-size: 11px; text-align: center; border-color: #bae6fd; }
+  tr.tr-istirahat .td-jam { color: #0284c7; }
 
   /* Empty */
   .empty-state { padding: 40px 28px; text-align: center; color: #94a3b8; }
@@ -246,7 +248,7 @@
 
     {{-- Guru bar --}}
     <div class="guru-bar">
-      <div class="guru-avatar">{{ strtoupper(substr($guru->nama, 0, 1)) }}</div>
+      <div class="guru-avatar">{{ $guru->username }}</div>
       <div>
         <div class="guru-nama">{{ $guru->nama }}</div>
         <div class="guru-meta">
@@ -280,12 +282,26 @@
               </tr>
             </thead>
             <tbody>
-              @foreach($jadwalHari as $j)
-              <tr>
-                <td class="td-jam">{{ substr($j->jamPelajaran->jam_mulai,0,5) }} – {{ substr($j->jamPelajaran->jam_selesai,0,5) }}</td>
-                <td class="td-mapel">{{ $j->mapel->nama }}</td>
-                <td class="td-kelas">Kelas {{ $j->kelas->nama }}</td>
-              </tr>
+              @php
+                $jadwalByJamKe = $jadwalHari->keyBy(fn($j) => $j->jamPelajaran->jam_ke);
+                $slotsHariIni  = ($jamPelajaran->get($hariNum) ?? collect())->sortBy('jam_mulai');
+              @endphp
+              @foreach($slotsHariIni as $slot)
+                @if($slot->is_istirahat)
+                <tr class="tr-istirahat">
+                  <td class="td-jam">{{ substr($slot->jam_mulai,0,5) }} – {{ substr($slot->jam_selesai,0,5) }}</td>
+                  <td colspan="2">— Istirahat —</td>
+                </tr>
+                @else
+                  @php $j = $jadwalByJamKe->get($slot->jam_ke); @endphp
+                  @if($j)
+                  <tr>
+                    <td class="td-jam">{{ substr($j->jamPelajaran->jam_mulai,0,5) }} – {{ substr($j->jamPelajaran->jam_selesai,0,5) }}</td>
+                    <td class="td-mapel">{{ $j->mapel->nama }}</td>
+                    <td class="td-kelas">Kelas {{ $j->kelas->nama }}</td>
+                  </tr>
+                  @endif
+                @endif
               @endforeach
             </tbody>
           </table>

@@ -86,38 +86,28 @@ class Jadwal extends Model
     }
 
     /**
-     * Kelompokkan jadwal yang Mapel+Kelas sama dan jam berurutan menjadi satu grup sesi.
-     * Input harus sudah di-sort berdasarkan jam_ke ASC.
-     * Return: Collection of ['jadwal' => Collection<Jadwal>, 'ids' => int[]]
+     * Kelompokkan jadwal berdasarkan aturan bisnis: 1 guru + 1 mapel + 1 kelas + 1 hari = 1 sesi jurnal.
+     * JP yang guru, mapel dan kelasnya sama di hari yang sama selalu digabung jadi satu grup,
+     * tidak peduli berurutan atau tidak.
      */
     public static function grupkanBerurutan(\Illuminate\Support\Collection $jadwal): \Illuminate\Support\Collection
     {
-        $groups  = collect();
-        $current = null;
+        $groups = collect();
+        
+        $grouped = $jadwal->groupBy(function ($j) {
+            return $j->hari . '|' . $j->kelas_id . '|' . $j->mapel_id . '|' . $j->guru_id;
+        });
 
-        foreach ($jadwal as $j) {
-            if ($current === null) {
-                $current = ['jadwal' => collect([$j]), 'ids' => [$j->id]];
-            } else {
-                $last           = $current['jadwal']->last();
-                $sameMapelKelas = $last->mapel_id === $j->mapel_id && $last->kelas_id === $j->kelas_id;
-                $berurutan      = ($last->jamPelajaran->jam_ke + 1 === $j->jamPelajaran->jam_ke)
-                               || ($last->jamPelajaran->jam_selesai === $j->jamPelajaran->jam_mulai);
-
-                if ($sameMapelKelas && $berurutan) {
-                    $current['jadwal']->push($j);
-                    $current['ids'][] = $j->id;
-                } else {
-                    $groups->push($current);
-                    $current = ['jadwal' => collect([$j]), 'ids' => [$j->id]];
-                }
-            }
+        foreach ($grouped as $group) {
+            // Urutkan berdasarkan jam_mulai agar jadwal pertama dan terakhir benar
+            $sortedGroup = $group->sortBy(fn($j) => $j->jamPelajaran->jam_mulai)->values();
+            $groups->push([
+                'jadwal' => $sortedGroup,
+                'ids' => $sortedGroup->pluck('id')->toArray()
+            ]);
         }
-
-        if ($current !== null) {
-            $groups->push($current);
-        }
-
-        return $groups;
+        
+        // Urutkan groups berdasarkan jam mulai dari jadwal pertama
+        return $groups->sortBy(fn($g) => $g['jadwal']->first()->jamPelajaran->jam_mulai)->values();
     }
 }
