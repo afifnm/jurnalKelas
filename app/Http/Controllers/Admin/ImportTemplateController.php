@@ -80,7 +80,7 @@ class ImportTemplateController extends Controller
 
         // Row 1 — header names
         foreach ($headers as $i => $header) {
-            $dataSheet->getCellByColumnAndRow($i + 1, 1)->setValue($header);
+            $dataSheet->setCellValue([$i + 1, 1], $header);
         }
 
         $dataSheet->getStyle("A1:{$lastColLetter}1")->applyFromArray([
@@ -107,7 +107,7 @@ class ImportTemplateController extends Controller
 
         // Row 2 — hint/description per column
         foreach ($hints as $i => $hint) {
-            $dataSheet->getCellByColumnAndRow($i + 1, 2)->setValue($hint);
+            $dataSheet->setCellValue([$i + 1, 2], $hint);
         }
 
         $dataSheet->getStyle("A2:{$lastColLetter}2")->applyFromArray([
@@ -162,7 +162,7 @@ class ImportTemplateController extends Controller
 
         foreach ($petunjuk as $rowIndex => $rowData) {
             foreach ($rowData as $colIndex => $value) {
-                $petunjukSheet->getCellByColumnAndRow($colIndex + 1, $rowIndex + 1)->setValue($value);
+                $petunjukSheet->setCellValue([$colIndex + 1, $rowIndex + 1], $value);
             }
         }
 
