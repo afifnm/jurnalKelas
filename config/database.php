@@ -59,7 +59,8 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
-            'timezone' => '+07:00',
+            // Gunakan sesi UTC agar kolom TIMESTAMP tidak mendapat offset +7 saat dibaca.
+            'timezone' => env('DB_TIMEZONE', '+00:00'),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],

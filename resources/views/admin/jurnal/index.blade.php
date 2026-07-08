@@ -18,6 +18,12 @@
                 @endif
             </p>
         </div>
+        <a href="{{ route('admin.jurnal.print', request()->only(['guru_id', 'kelas_id', 'periode', 'tanggal_dari', 'tanggal_sampai'])) }}"
+           target="_blank" rel="noopener"
+           class="btn-secondary shrink-0 text-sm">
+            <i data-lucide="printer" class="h-4 w-4"></i>
+            Cetak Jurnal
+        </a>
     </div>
 
     <!-- Filter -->
@@ -83,6 +89,7 @@
         {{-- Mobile: Card List --}}
         <div class="divide-y divide-slate-100 dark:divide-zinc-700/50 md:hidden">
             @forelse($jurnal as $j)
+            @php $jamSesi = $jamSesiMap[$j->id] ?? null; @endphp
             <div class="p-4">
                 <div class="flex items-start justify-between gap-3 mb-2">
                     <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -98,7 +105,7 @@
                             </p>
                         </div>
                     </div>
-                    @if($j->isInputDalamJamMengajar())
+                    @if($j->isInputDalamJamMengajar($jamSesiMap[$j->id] ?? null))
                     <span class="badge badge-validated flex-shrink-0">
                         <i data-lucide="clock-check" class="w-3 h-3"></i> Dalam jam
                     </span>
@@ -112,6 +119,15 @@
                     {{ $j->tanggal->translatedFormat('l, j F Y') }}
                     · <span class="font-mono">{{ $j->created_at->format('H:i') }}</span>
                 </p>
+                <div class="mb-2 flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400">
+                    <i data-lucide="clock-3" class="h-3.5 w-3.5 text-amber-500"></i>
+                    <span class="font-mono font-semibold text-slate-700 dark:text-zinc-200">
+                        {{ $jamSesi ? $jamSesi['mulai'].'–'.$jamSesi['selesai'] : '-' }}
+                    </span>
+                    @if($jamSesi)
+                        <span>Jam ke-{{ $jamSesi['jam_ke_mulai'] }}–{{ $jamSesi['jam_ke_selesai'] }} · {{ $jamSesi['jumlah'] }} JP</span>
+                    @endif
+                </div>
                 <p class="text-xs text-slate-600 dark:text-zinc-400 line-clamp-2 mb-3">{{ $j->materi }}</p>
                 <div class="flex items-center justify-between">
                     @if($j->lampiran->count())
@@ -145,6 +161,7 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider w-10">#</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Guru</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Kelas / Mapel</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Jam Pelajaran</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Tanggal</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Keterlambatan</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Materi</th>
@@ -153,6 +170,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-zinc-700/50">
                     @forelse($jurnal as $j)
+                    @php $jamSesi = $jamSesiMap[$j->id] ?? null; @endphp
                     <tr class="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                         <td class="px-4 py-3.5 text-slate-400 dark:text-zinc-500 text-xs">{{ $loop->iteration + ($jurnal->currentPage() - 1) * $jurnal->perPage() }}</td>
                         <td class="px-4 py-3.5">
@@ -172,11 +190,21 @@
                             <p class="text-xs text-slate-400">{{ $j->mapel->nama }}</p>
                         </td>
                         <td class="px-4 py-3.5">
+                            <p class="font-mono font-semibold text-slate-700 dark:text-zinc-200">
+                                {{ $jamSesi ? $jamSesi['mulai'].'–'.$jamSesi['selesai'] : '-' }}
+                            </p>
+                            @if($jamSesi)
+                                <p class="mt-0.5 text-[10px] text-slate-400">
+                                    Jam ke-{{ $jamSesi['jam_ke_mulai'] }}–{{ $jamSesi['jam_ke_selesai'] }} · {{ $jamSesi['jumlah'] }} JP
+                                </p>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3.5">
                             <p class="font-semibold text-slate-700 dark:text-slate-200">{{ $j->tanggal->translatedFormat('l, j F Y') }}</p>
                             <p class="text-xs text-slate-400 font-mono">{{ $j->created_at->format('H:i') }}</p>
                         </td>
                         <td class="px-4 py-3.5">
-                            @if($j->isInputDalamJamMengajar())
+                            @if($j->isInputDalamJamMengajar($jamSesiMap[$j->id] ?? null))
                                 <span class="badge badge-validated">
                                     <i data-lucide="clock-check" class="w-3 h-3"></i> Dalam jam
                                 </span>
@@ -204,7 +232,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="7" class="px-4 py-12 text-center">
+                    <tr><td colspan="8" class="px-4 py-12 text-center">
                         <div class="flex flex-col items-center text-slate-400 dark:text-zinc-600">
                             <i data-lucide="inbox" class="w-10 h-10 mb-2 opacity-50"></i>
                             <p class="text-sm">Belum ada jurnal</p>
@@ -250,7 +278,7 @@
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.guru?.nama"></p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Tanggal</p>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Tanggal Jurnal</p>
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="formatTanggal(detailData.tanggal)"></p>
                                 </div>
                                 <div>
@@ -262,8 +290,22 @@
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.mapel?.nama"></p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Waktu Input</p>
-                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.created_at ? detailData.created_at.substring(0,16).replace('T',' ') : '-'"></p>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Tanggal Input</p>
+                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.tanggal_input || '-'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Input</p>
+                                    <p class="font-mono font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.jam_input ? `${detailData.jam_input} WIB` : '-'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Pelajaran</p>
+                                    <p class="font-mono font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.jam_sesi ? `${detailData.jam_sesi.mulai}–${detailData.jam_sesi.selesai}` : '-'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Keterlambatan</p>
+                                    <p class="font-semibold"
+                                       :class="detailData.dalam_jam ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                       x-text="detailData.status_keterlambatan || '-'"></p>
                                 </div>
                             </div>
 
@@ -351,7 +393,10 @@ function jurnalViewManager() {
         async viewDetail(id) {
             this.detailData = null;
             this.detailModal = true;
-            const res = await fetch(`/admin/jurnal/${id}`, { headers: { 'Accept': 'application/json' } });
+            const res = await fetch(`/admin/jurnal/${id}`, {
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json' }
+            });
             this.detailData = await res.json();
             this.$nextTick(() => lucide.createIcons());
         },

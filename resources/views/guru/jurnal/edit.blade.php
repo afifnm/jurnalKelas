@@ -100,8 +100,8 @@
                 </div>
                 <div>
                     <p class="text-xs text-slate-400 dark:text-zinc-500 mb-1">Status</p>
-                    <p class="text-sm font-semibold input-field bg-slate-50 dark:bg-zinc-800/50 cursor-not-allowed {{ $jurnal->isInputDalamJamMengajar() ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
-                        {{ $jurnal->isInputDalamJamMengajar() ? '✓ Dalam jam' : '✗ Di luar jam' }}
+                    <p class="text-sm font-semibold input-field bg-slate-50 dark:bg-zinc-800/50 cursor-not-allowed {{ $jurnal->isInputDalamJamMengajar($jamSesi) ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
+                        {{ $jurnal->isInputDalamJamMengajar($jamSesi) ? '✓ Dalam jam' : '✗ Di luar jam' }}
                     </p>
                 </div>
             </div>

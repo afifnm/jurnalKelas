@@ -235,7 +235,7 @@ document.addEventListener('reinit-icons', () => lucide.createIcons());
 @php $navRoute = request()->route()?->getName() ?? ''; @endphp
 <nav class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-t border-slate-200/70 dark:border-zinc-700/50"
      style="padding-bottom: env(safe-area-inset-bottom, 0px)">
-    <div class="grid grid-cols-3 h-16">
+    <div class="grid grid-cols-5 h-16">
 
         {{-- Dashboard --}}
         <a href="{{ route('guru.dashboard') }}"
@@ -243,6 +243,14 @@ document.addEventListener('reinit-icons', () => lucide.createIcons());
                   {{ str_starts_with($navRoute, 'guru.dashboard') ? 'text-amber-500 dark:text-amber-400' : 'text-slate-500 dark:text-zinc-500' }}">
             <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
             <span class="text-[10px] font-semibold">Dashboard</span>
+        </a>
+
+        {{-- Jadwal Mengajar --}}
+        <a href="{{ route('guru.jadwal.index') }}"
+           class="flex flex-col items-center justify-center gap-1 transition-colors
+                  {{ str_starts_with($navRoute, 'guru.jadwal') ? 'text-amber-500 dark:text-amber-400' : 'text-slate-500 dark:text-zinc-500' }}">
+            <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+            <span class="text-[9px] font-semibold leading-tight text-center">Jadwal Mengajar</span>
         </a>
 
         {{-- Isi Jurnal — tombol tengah mengambang --}}
@@ -265,6 +273,16 @@ document.addEventListener('reinit-icons', () => lucide.createIcons());
             <i data-lucide="notebook" class="w-5 h-5"></i>
             <span class="text-[10px] font-semibold">Jurnal</span>
         </a>
+
+        {{-- Logout --}}
+        <form method="POST" action="{{ route('logout') }}" class="h-full">
+            @csrf
+            <button type="submit"
+                    class="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-500 dark:text-zinc-500 transition-colors hover:text-red-500 dark:hover:text-red-400">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+                <span class="text-[9px] font-semibold">Logout</span>
+            </button>
+        </form>
 
     </div>
 </nav>

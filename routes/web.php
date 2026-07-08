@@ -93,6 +93,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::put('/sekolah',   [Admin\SekolahController::class, 'update'])->name('sekolah.update');
 
     Route::get('/jurnal',         [Admin\JurnalController::class, 'index'])->name('jurnal.index');
+    Route::get('/jurnal/cetak',   [Admin\JurnalController::class, 'cetak'])->name('jurnal.print');
     Route::get('/jurnal/{jurnal}', [Admin\JurnalController::class, 'show'])->name('jurnal.show');
 });
 

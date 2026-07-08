@@ -326,7 +326,8 @@
             @foreach($hari['entries'] as $entry)
             @php
               $j = $entry['jadwal']; $jLast = $entry['lastJadwal'] ?? $j; $jr = $entry['jurnal']; $jumlahJam = $entry['jumlahJam'] ?? 1;
-              $dalamJam = $jr ? $jr->isInputDalamJamMengajar() : false;
+              $jamSesi = ['mulai' => substr($j->jamPelajaran->jam_mulai, 0, 5), 'selesai' => substr($jLast->jamPelajaran->jam_selesai, 0, 5), 'jumlah' => $jumlahJam];
+              $dalamJam = $jr ? $jr->isInputDalamJamMengajar($jamSesi) : false;
             @endphp
             <tr class="{{ $jr ? '' : 'row-missing' }}">
               <td class="td-jam">{{ substr($j->jamPelajaran->jam_mulai,0,5) }}&ndash;{{ substr($jLast->jamPelajaran->jam_selesai,0,5) }}@if($jumlahJam > 1) <span style="font-size:9px;font-weight:normal;color:#94a3b8">({{ $jumlahJam }}jp)</span>@endif</td>

@@ -228,7 +228,7 @@ $rolePrefix = auth()->user()->hasRole('admin') ? 'admin.' : 'ks.';
                     <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">{{ $j->guru->nama }}</p>
                     <p class="text-[10px] text-slate-400">{{ $j->mapel->nama }} · {{ $j->kelas->nama }} · {{ $j->tanggal->translatedFormat('j M') }}</p>
                 </div>
-                @if(!$j->isInputDalamJamMengajar())
+                @if(!$j->isInputDalamJamMengajar($jamSesiMap[$j->id] ?? null))
                 <span class="text-[10px] text-red-500 dark:text-red-400 font-medium flex-shrink-0">Di luar jam</span>
                 @endif
             </div>

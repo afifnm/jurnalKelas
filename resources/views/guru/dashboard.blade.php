@@ -191,7 +191,7 @@
                         <a href="{{ route('guru.jadwal.by-kelas', ['kelas_id' => $j->kelas->id]) }}" class="hover:underline hover:text-blue-600">{{ $j->kelas->nama }}</a> — {{ $j->tanggal->translatedFormat('l, j F Y') }}
                     </p>
                 </div>
-                @if($j->isInputDalamJamMengajar())
+                @if($j->isInputDalamJamMengajar($jamSesiMap[$j->id] ?? null))
                 <span class="text-[10px] text-green-500 dark:text-green-400 font-medium flex-shrink-0">Dalam jam</span>
                 @else
                 <span class="text-[10px] text-red-500 dark:text-red-400 font-medium flex-shrink-0">Di luar jam</span>

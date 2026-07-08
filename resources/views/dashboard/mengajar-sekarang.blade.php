@@ -165,7 +165,7 @@ $rolePrefix = auth()->user()->hasRole('admin') ? 'admin.' : 'ks.';
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.guru?.nama"></p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Tanggal</p>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Tanggal Jurnal</p>
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="formatTanggal(detailData.tanggal)"></p>
                                 </div>
                                 <div>
@@ -177,8 +177,22 @@ $rolePrefix = auth()->user()->hasRole('admin') ? 'admin.' : 'ks.';
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.mapel?.nama"></p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Waktu Input</p>
-                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.created_at ? detailData.created_at.substring(0,16).replace('T',' ') : '-'"></p>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Tanggal Input</p>
+                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.tanggal_input || '-'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Input</p>
+                                    <p class="font-mono font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.jam_input ? `${detailData.jam_input} WIB` : '-'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Pelajaran</p>
+                                    <p class="font-mono font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.jam_sesi ? `${detailData.jam_sesi.mulai}–${detailData.jam_sesi.selesai}` : '-'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Keterlambatan</p>
+                                    <p class="font-semibold"
+                                       :class="detailData.dalam_jam ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                       x-text="detailData.status_keterlambatan || '-'"></p>
                                 </div>
                             </div>
 
@@ -249,7 +263,10 @@ function jurnalViewManager() {
             this.detailData = null;
             this.detailModal = true;
             try {
-                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const res = await fetch(url, {
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' }
+                });
                 this.detailData = await res.json();
                 this.$nextTick(() => lucide.createIcons());
             } catch (error) {

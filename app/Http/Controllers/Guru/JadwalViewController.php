@@ -65,17 +65,18 @@ class JadwalViewController extends Controller
         $guru        = auth()->user();
         $tahunAjaran = TahunAjaran::orderByDesc('is_aktif')->get();
         $tahunAktif  = TahunAjaran::aktif();
-        $guruList    = \App\Models\User::role('guru')->where('is_active', true)->orderBy('nama')->get();
+        // Guru hanya boleh melihat jadwal mengajar miliknya sendiri.
+        $guruList    = collect([$guru]);
         $namaHari    = Jadwal::getNamaHariList();
         $hariIni     = now()->dayOfWeekIso;
 
         $tahunId = $request->tahun_ajaran_id ?? $tahunAktif?->id;
-        $guruId  = $request->guru_id ?? $guru->id;
+        $guruId  = $guru->id;
 
         $allJadwalGuru = Jadwal::select('jadwal.*')
             ->join('jam_pelajaran', 'jadwal.jam_pelajaran_id', '=', 'jam_pelajaran.id')
             ->with(['kelas', 'mapel', 'jamPelajaran'])
-            ->whereIn('guru_id', $guruList->pluck('id'))
+            ->where('guru_id', $guru->id)
             ->when($tahunId, fn($q) => $q->where('tahun_ajaran_id', $tahunId))
             ->orderBy('jam_pelajaran.hari')
             ->orderBy('jam_pelajaran.jam_mulai')

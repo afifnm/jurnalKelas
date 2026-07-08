@@ -91,6 +91,7 @@
         {{-- Mobile: Card List --}}
         <div class="divide-y divide-slate-100 dark:divide-zinc-700/50 md:hidden">
             @forelse($jurnal as $j)
+            @php $jamSesi = $jamSesiMap[$j->id] ?? null; @endphp
             <div class="p-4">
                 <div class="flex items-start justify-between gap-3 mb-2">
                     <div class="flex-1 min-w-0">
@@ -101,7 +102,7 @@
                             </span> · {{ $j->mapel->nama }}
                         </p>
                     </div>
-                    @if($j->isInputDalamJamMengajar())
+                    @if($j->isInputDalamJamMengajar($jamSesiMap[$j->id] ?? null))
                     <span class="badge badge-validated flex-shrink-0">
                         <i data-lucide="clock-check" class="w-3 h-3"></i> Dalam jam
                     </span>
@@ -112,6 +113,18 @@
                     @endif
                 </div>
                 <p class="text-xs text-slate-600 dark:text-zinc-400 line-clamp-2 mb-3">{{ $j->materi }}</p>
+                <p class="mb-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400">
+                    <i data-lucide="clock-3" class="w-3.5 h-3.5 text-amber-500"></i>
+                    <span>Jam pelajaran:</span>
+                    <span class="font-mono font-semibold text-slate-700 dark:text-zinc-200">
+                        {{ $jamSesi ? $jamSesi['mulai'].'–'.$jamSesi['selesai'] : '-' }}
+                    </span>
+                </p>
+                @if($jamSesi)
+                    <p class="mb-2 pl-5 text-[10px] text-slate-400">
+                        Jam ke-{{ $jamSesi['jam_ke_mulai'] }}–{{ $jamSesi['jam_ke_selesai'] }} · {{ $jamSesi['jumlah'] }} JP
+                    </p>
+                @endif
                 <div class="flex items-center justify-between gap-2">
                     <span class="text-xs text-slate-400 dark:text-zinc-500 font-mono">
                         Input: {{ $j->created_at->format('H:i') }}
@@ -156,6 +169,7 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider w-10">#</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Tanggal</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Kelas / Mapel</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Jam Pelajaran</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Waktu Input</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Materi</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">Aksi</th>
@@ -163,6 +177,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-zinc-700/50">
                     @forelse($jurnal as $j)
+                    @php $jamSesi = $jamSesiMap[$j->id] ?? null; @endphp
                     <tr class="hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                         <td class="px-4 py-3.5 text-slate-400 dark:text-zinc-500 text-xs">{{ $loop->iteration + ($jurnal->currentPage() - 1) * $jurnal->perPage() }}</td>
                         <td class="px-4 py-3.5">
@@ -175,8 +190,18 @@
                             <p class="text-xs text-slate-400">{{ $j->mapel->nama }}</p>
                         </td>
                         <td class="px-4 py-3.5">
+                            <p class="font-mono font-semibold text-slate-700 dark:text-zinc-200">
+                                {{ $jamSesi ? $jamSesi['mulai'].'–'.$jamSesi['selesai'] : '-' }}
+                            </p>
+                            @if($jamSesi)
+                                <p class="mt-0.5 text-[10px] text-slate-400">
+                                    Jam ke-{{ $jamSesi['jam_ke_mulai'] }}–{{ $jamSesi['jam_ke_selesai'] }} · {{ $jamSesi['jumlah'] }} JP
+                                </p>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3.5">
                             <p class="font-mono text-sm text-slate-600 dark:text-zinc-400">{{ $j->created_at->format('H:i') }}</p>
-                            <span class="text-[10px] font-medium {{ $j->isInputDalamJamMengajar() ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
+                            <span class="text-[10px] font-medium {{ $j->isInputDalamJamMengajar($jamSesiMap[$j->id] ?? null) ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
                                 {{ $j->created_at->translatedFormat('d/m/Y') }}
                             </span>
                         </td>
@@ -248,7 +273,7 @@
 
                             <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                                 <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Tanggal</p>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Tanggal Jurnal</p>
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="formatTanggal(detailData.tanggal)"></p>
                                 </div>
                                 <div>
@@ -260,8 +285,22 @@
                                     <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.mapel?.nama"></p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Waktu Input</p>
-                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.created_at ? detailData.created_at.substring(0,16).replace('T',' ') : '-'"></p>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Tanggal Input</p>
+                                    <p class="font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.tanggal_input || '-'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Input</p>
+                                    <p class="font-mono font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.jam_input ? `${detailData.jam_input} WIB` : '-'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Jam Pelajaran</p>
+                                    <p class="font-mono font-semibold text-slate-700 dark:text-slate-200" x-text="detailData.jam_sesi ? `${detailData.jam_sesi.mulai}–${detailData.jam_sesi.selesai}` : '-'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-slate-400 dark:text-zinc-500 mb-0.5">Keterlambatan</p>
+                                    <p class="font-semibold"
+                                       :class="detailData.dalam_jam ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                       x-text="detailData.status_keterlambatan || '-'"></p>
                                 </div>
                             </div>
 
@@ -332,7 +371,10 @@ function jurnalManager() {
         async viewDetail(id) {
             this.detailData = null;
             this.detailModal = true;
-            const res = await fetch(`/guru/jurnal/${id}/show`, { headers: { 'Accept': 'application/json' } });
+            const res = await fetch(`/guru/jurnal/${id}/show`, {
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json' }
+            });
             this.detailData = await res.json();
             this.$nextTick(() => lucide.createIcons());
         },

@@ -7,6 +7,7 @@ use App\Models\Jadwal;
 use App\Models\Jurnal;
 use App\Models\TahunAjaran;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -15,18 +16,18 @@ class DashboardController extends Controller
     public function index(): View
     {
         $tahunAktif = TahunAjaran::aktif();
-        $hariIni    = now()->dayOfWeekIso;
-        $waktuIni   = now()->format('H:i:s');
+        $hariIni = now()->dayOfWeekIso;
+        $waktuIni = now()->format('H:i:s');
 
         $totalGuru = User::role('guru')->where('is_active', true)->count();
 
         // Jadwal hari ini (dengan detail untuk modal)
-        $jadwalHariIniQuery = Jadwal::whereHas('jamPelajaran', fn($q) => $q->where('hari', $hariIni))
-            ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
+        $jadwalHariIniQuery = Jadwal::whereHas('jamPelajaran', fn ($q) => $q->where('hari', $hariIni))
+            ->when($tahunAktif, fn ($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->with(['guru', 'kelas', 'mapel', 'jamPelajaran']);
 
         $semualJadwalHariIni = $jadwalHariIniQuery->get();
-        $jadwalGuruIds       = $semualJadwalHariIni->pluck('guru_id')->unique();
+        $jadwalGuruIds = $semualJadwalHariIni->pluck('guru_id')->unique();
 
         $sudahIsiHariIni = Jurnal::whereDate('tanggal', today())
             ->pluck('guru_id')
@@ -48,21 +49,22 @@ class DashboardController extends Controller
 
         // Mengajar hari ini: dikelompokkan per guru → per grup jam berurutan
         $mengajarSekarang = $semualJadwalHariIni
-            ->filter(fn($j) => $j->jamPelajaran !== null)
+            ->filter(fn ($j) => $j->jamPelajaran !== null)
             ->groupBy('guru_id')
-            ->map(fn($jadwalGuru) => Jadwal::grupkanBerurutan($jadwalGuru->sortBy(fn($j) => $j->jamPelajaran->jam_mulai)))
+            ->map(fn ($jadwalGuru) => Jadwal::grupkanBerurutan($jadwalGuru->sortBy(fn ($j) => $j->jamPelajaran->jam_mulai)))
             ->values()
             ->flatten(1)
-            ->sortBy(fn($grup) => $grup['jadwal']->first()->jamPelajaran->jam_mulai)
+            ->sortBy(fn ($grup) => $grup['jadwal']->first()->jamPelajaran->jam_mulai)
             ->values();
 
-        $jurnalHariIni  = Jurnal::whereDate('tanggal', today())->count();
+        $jurnalHariIni = Jurnal::whereDate('tanggal', today())->count();
         $jurnalBulanIni = Jurnal::whereRaw("DATE_FORMAT(tanggal, '%Y-%m') = ?", [now()->format('Y-m')])->count();
 
-        $jurnalTerbaru = Jurnal::with(['guru', 'kelas', 'mapel'])
+        $jurnalTerbaru = Jurnal::with(['guru', 'kelas', 'mapel', 'jadwal.jamPelajaran'])
             ->latest('tanggal')
             ->take(8)
             ->get();
+        $jamSesiMap = Jurnal::buildJamSesiMap($jurnalTerbaru);
 
         // Tren kepatuhan 30 hari terakhir
         $trenKepatuhan = $this->getTrenKepatuhan($tahunAktif);
@@ -70,7 +72,7 @@ class DashboardController extends Controller
         return view('dashboard.index', compact(
             'totalGuru', 'belumIsiHariIni', 'jadwalBelumIsi',
             'mengajarSekarang',
-            'jurnalHariIni', 'jurnalBulanIni', 'jurnalTerbaru', 'tahunAktif',
+            'jurnalHariIni', 'jurnalBulanIni', 'jurnalTerbaru', 'jamSesiMap', 'tahunAktif',
             'trenKepatuhan'
         ));
     }
@@ -80,26 +82,26 @@ class DashboardController extends Controller
         $hasil = [];
 
         // Guru per hari-of-week berdasarkan jadwal aktif (1=Senin ... 7=Minggu)
-        $jadwalAktif = Jadwal::when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
+        $jadwalAktif = Jadwal::when($tahunAktif, fn ($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->with('jamPelajaran')
             ->get()
-            ->filter(fn($j) => $j->jamPelajaran !== null)
-            ->groupBy(fn($j) => $j->jamPelajaran->hari) // hari: 1-7
-            ->map(fn($items) => $items->pluck('guru_id')->unique()->count());
+            ->filter(fn ($j) => $j->jamPelajaran !== null)
+            ->groupBy(fn ($j) => $j->jamPelajaran->hari) // hari: 1-7
+            ->map(fn ($items) => $items->pluck('guru_id')->unique()->count());
 
         // Jurnal 30 hari terakhir: hitung guru unik per tanggal
         $jurnalPerHari = Jurnal::select('tanggal', DB::raw('COUNT(DISTINCT guru_id) as jumlah_isi'))
             ->where('tanggal', '>=', now()->subDays(29)->toDateString())
             ->groupBy('tanggal')
             ->get()
-            ->keyBy(fn($r) => $r->tanggal->toDateString());
+            ->keyBy(fn ($r) => $r->tanggal->toDateString());
 
         for ($i = 29; $i >= 0; $i--) {
-            $tgl       = now()->subDays($i)->toDate();
-            $tglStr    = now()->subDays($i)->toDateString();
+            $tgl = now()->subDays($i)->toDate();
+            $tglStr = now()->subDays($i)->toDateString();
             $hariOfWeek = (int) now()->subDays($i)->dayOfWeekIso; // 1=Senin
-            $totalGuru  = $jadwalAktif->get($hariOfWeek, 0);
-            $jumlahIsi  = $jurnalPerHari->has($tglStr) ? (int) $jurnalPerHari[$tglStr]->jumlah_isi : 0;
+            $totalGuru = $jadwalAktif->get($hariOfWeek, 0);
+            $jumlahIsi = $jurnalPerHari->has($tglStr) ? (int) $jurnalPerHari[$tglStr]->jumlah_isi : 0;
 
             $persen = $totalGuru > 0 ? round(($jumlahIsi / $totalGuru) * 100) : null;
 
@@ -110,10 +112,10 @@ class DashboardController extends Controller
 
             $hasil[] = [
                 'tanggal' => $tglStr,
-                'label'   => \Carbon\Carbon::parse($tgl)->translatedFormat('D j M'),
-                'persen'  => $persen,
-                'isi'     => $jumlahIsi,
-                'total'   => $totalGuru,
+                'label' => Carbon::parse($tgl)->translatedFormat('D j M'),
+                'persen' => $persen,
+                'isi' => $jumlahIsi,
+                'total' => $totalGuru,
             ];
         }
 
@@ -123,31 +125,32 @@ class DashboardController extends Controller
     public function mengajarSekarang(): View
     {
         $tahunAktif = TahunAjaran::aktif();
-        $hariIni    = now()->dayOfWeekIso;
+        $hariIni = now()->dayOfWeekIso;
 
-        $semuaJadwal = Jadwal::whereHas('jamPelajaran', fn($q) => $q->where('hari', $hariIni))
-            ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
+        $semuaJadwal = Jadwal::whereHas('jamPelajaran', fn ($q) => $q->where('hari', $hariIni))
+            ->when($tahunAktif, fn ($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->with(['guru', 'kelas', 'mapel', 'jamPelajaran'])
             ->get()
-            ->filter(fn($j) => $j->jamPelajaran !== null)
-            ->sortBy(fn($j) => $j->jamPelajaran?->jam_mulai)
+            ->filter(fn ($j) => $j->jamPelajaran !== null)
+            ->sortBy(fn ($j) => $j->jamPelajaran?->jam_mulai)
             ->values();
 
-        $jurnalsToday = \App\Models\Jurnal::whereDate('tanggal', today())->get();
+        $jurnalsToday = Jurnal::whereDate('tanggal', today())->get();
 
         // Kelompokkan per guru → per grup jam berurutan (mapel+kelas sama)
         $mengajarSekarang = $semuaJadwal
             ->groupBy('guru_id')
-            ->map(fn($jadwalGuru) => Jadwal::grupkanBerurutan($jadwalGuru))
+            ->map(fn ($jadwalGuru) => Jadwal::grupkanBerurutan($jadwalGuru))
             ->values()
             ->flatten(1) // jadi flat collection of grup
-            ->sortBy(fn($grup) => $grup['jadwal']->first()->jamPelajaran->jam_mulai)
+            ->sortBy(fn ($grup) => $grup['jadwal']->first()->jamPelajaran->jam_mulai)
             ->map(function ($grup) use ($jurnalsToday) {
                 $first = $grup['jadwal']->first();
                 $grup['jurnal'] = $jurnalsToday->first(function ($j) use ($grup, $first) {
-                    return in_array($j->jadwal_id, $grup['ids']) || 
+                    return in_array($j->jadwal_id, $grup['ids']) ||
                            ($j->guru_id == $first->guru_id && $j->mapel_id == $first->mapel_id && $j->kelas_id == $first->kelas_id);
                 });
+
                 return $grup;
             })
             ->values();
@@ -158,18 +161,18 @@ class DashboardController extends Controller
     public function belumIsiJurnal(): View
     {
         $tahunAktif = TahunAjaran::aktif();
-        $hariIni    = now()->dayOfWeekIso;
+        $hariIni = now()->dayOfWeekIso;
 
-        $semualJadwalHariIni = Jadwal::whereHas('jamPelajaran', fn($q) => $q->where('hari', $hariIni))
-            ->when($tahunAktif, fn($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
+        $semualJadwalHariIni = Jadwal::whereHas('jamPelajaran', fn ($q) => $q->where('hari', $hariIni))
+            ->when($tahunAktif, fn ($q) => $q->where('tahun_ajaran_id', $tahunAktif->id))
             ->with(['guru', 'kelas', 'mapel', 'jamPelajaran'])
             ->get();
 
-        $jadwalGuruIds   = $semualJadwalHariIni->pluck('guru_id')->unique();
-        $sudahIsiIds     = \App\Models\Jurnal::whereDate('tanggal', today())->pluck('guru_id')->unique();
+        $jadwalGuruIds = $semualJadwalHariIni->pluck('guru_id')->unique();
+        $sudahIsiIds = Jurnal::whereDate('tanggal', today())->pluck('guru_id')->unique();
         $belumIsiGuruIds = $jadwalGuruIds->diff($sudahIsiIds);
 
-        $belumIsiHariIni = \App\Models\User::role('guru')
+        $belumIsiHariIni = User::role('guru')
             ->where('is_active', true)
             ->whereIn('id', $belumIsiGuruIds)
             ->orderBy('nama')

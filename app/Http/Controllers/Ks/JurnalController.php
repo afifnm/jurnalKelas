@@ -24,39 +24,45 @@ class JurnalController extends Controller
         } elseif ($periode === 'bulan_ini') {
             $query->whereMonth('tanggal', now()->month)->whereYear('tanggal', now()->year);
         } elseif ($request->filled('tanggal_dari') || $request->filled('tanggal_sampai')) {
-            if ($request->filled('tanggal_dari')) $query->whereDate('tanggal', '>=', $request->tanggal_dari);
-            if ($request->filled('tanggal_sampai')) $query->whereDate('tanggal', '<=', $request->tanggal_sampai);
+            if ($request->filled('tanggal_dari')) {
+                $query->whereDate('tanggal', '>=', $request->tanggal_dari);
+            }
+            if ($request->filled('tanggal_sampai')) {
+                $query->whereDate('tanggal', '<=', $request->tanggal_sampai);
+            }
         }
 
-        if ($request->filled('guru_id')) $query->where('guru_id', $request->guru_id);
-        if ($request->filled('kelas_id')) $query->where('kelas_id', $request->kelas_id);
+        if ($request->filled('guru_id')) {
+            $query->where('guru_id', $request->guru_id);
+        }
+        if ($request->filled('kelas_id')) {
+            $query->where('kelas_id', $request->kelas_id);
+        }
 
-        $jurnal     = $query->latest('tanggal')->paginate(20)->withQueryString();
-        $guru       = User::role('guru')->orderBy('nama')->get();
-        $kelas      = Kelas::orderBy('nama')->get();
+        $jurnal = $query->latest('tanggal')->paginate(20)->withQueryString();
+        $guru = User::role('guru')->orderBy('nama')->get();
+        $kelas = Kelas::orderBy('nama')->get();
         $jamSesiMap = Jurnal::buildJamSesiMap($jurnal);
 
         return view('ks.jurnal.index', [
-            'jurnal'         => $jurnal,
-            'jamSesiMap'     => $jamSesiMap,
-            'guru'           => $guru,
-            'kelas'          => $kelas,
-            'canCreate'      => false,
-            'canEdit'        => false,
+            'jurnal' => $jurnal,
+            'jamSesiMap' => $jamSesiMap,
+            'guru' => $guru,
+            'kelas' => $kelas,
+            'canCreate' => false,
+            'canEdit' => false,
             'breadcrumbRole' => 'Kepala Sekolah',
-            'headerDesc'     => 'Lihat semua jurnal mengajar yang telah diisi oleh guru',
-            'indexRoute'     => route('ks.jurnal.index'),
-            'showRouteBase'  => '/ks/jurnal',
+            'headerDesc' => 'Lihat semua jurnal mengajar yang telah diisi oleh guru',
+            'indexRoute' => route('ks.jurnal.index'),
+            'showRouteBase' => '/ks/jurnal',
         ]);
     }
 
     public function show(Jurnal $jurnal): JsonResponse
     {
         $jurnal->load(['guru', 'kelas', 'mapel', 'jadwal.jamPelajaran', 'lampiran']);
-        $sesi = Jurnal::buildJamSesiMap(collect([$jurnal]));
-        $data = $jurnal->toArray();
-        $data['jam_sesi'] = $sesi[$jurnal->id] ?? null;
-        $data['dalam_jam'] = $jurnal->isInputDalamJamMengajar();
-        return response()->json($data);
+
+        return response()->json($jurnal->toDetailArray())
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
     }
 }
